@@ -1,0 +1,20 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+jupyter = "*"
+
+[packages]
+selenium = "*"
+pillow = "*"
+ipdb = "*"
+click = "*"
+redis = "*"
+flask = "*"
+flask-restful = "*"
+flask-cors = "*"
+
+[requires]
+python_version = "3.7"
