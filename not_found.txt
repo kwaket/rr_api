@@ -1,0 +1,3 @@
+50:26:0120401:78
+not_cadastral
+apple-touch-icon-precomposed.pngfavicon.icoapple-touch-icon.pngfedddfdfsafadsfadsAsdasadfdsakwafsdself.driver.find_element_by_id('submit-button').click()$(this).addClass('disabled');kwa50:26:0120401:78оаоа50:26:0120401:78оаоа50:26:0120401:78150:26:0120401:78150:26:0120401:781
