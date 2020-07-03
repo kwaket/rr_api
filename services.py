@@ -16,6 +16,7 @@ TASK_STATUSES = {
     "error": "error"
 }
 
+
 def _gen_id():
     hsh = hashlib.md5(
         datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f").encode('utf8'))
