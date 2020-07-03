@@ -1,59 +1,59 @@
-import time
+'''Module define buisneess processes.'''
+
+import os
 import json
-import logging
 import hashlib
 from datetime import datetime
 
-
-def get_result(r, task_id):
-    res = _get_results(r).get(task_id)
-    if res:
-        remove_result(r, task_id)
-    return res
+from settings import TASK_DIR
 
 
-def _get_results(r):
-    res = r.get('results')
-    return json.loads(res) if res else {}
+TASK_STATUSES = {
+    "adding": "adding",
+    "added": "added",
+    "updating": "updating",
+    "completed": "completed",
+    "error": "error"
+}
 
-
-def _update_results(r, results_dict):
-    r.set('results', json.dumps(results_dict))
-    return results_dict
-
-
-def push_result(r, task):
-    '''Push result of task with the same id.'''
-    logging.info('Push result of task ' + task['id'])
-    results = _get_results(r)
-    results[task['id']] = task
-    return _update_results(r, results)
-
-
-def remove_result(r, task_id):
-    '''Remove result of task.'''
-    logging.info('Remove result of task ' + task_id)
-    results = _get_results(r)
-    del results[task_id]
-    return _update_results(r, results)
-
-
-def gen_id():
-    h = hashlib.md5(
+def _gen_id():
+    hsh = hashlib.md5(
         datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f").encode('utf8'))
-    return h.hexdigest()
+    return hsh.hexdigest()
 
 
-def get_obj_data(r, cadnum):
-    task_id = gen_id()
+def _gen_filename(task_dir, task_id):
+    return os.path.join(task_dir, task_id + '.json')
+
+
+def _save_task(task: dict) -> dict:
+    filepath = _gen_filename(TASK_DIR, task['id'])
+    with open(filepath, 'w') as writer:
+        json.dump(task, writer)
+    return task
+
+
+def add_task(cadnum):
+    task_id = _gen_id()
     task = {
         'id': task_id,
-        'cadnum': cadnum
+        'cadnum': cadnum,
+        'inserted': datetime.now().isoformat(),
+        'updated': None,
+        'status': None
     }
-    r.publish('tasks-channel', json.dumps(task))
+    task = _save_task(task)
+    return task
 
-    result = get_result(r, task_id)
-    while not result:
-        time.sleep(1)
-        result = get_result(r, task_id)
-    return result
+
+def get_task(task_id: str) -> dict:
+    filename = _gen_filename(TASK_DIR, task_id)
+    return json.load(open(filename))
+
+
+def update_task(task_id: str, updated_options: dict) -> dict:
+    task = get_task(task_id)
+    task.update(updated_options)
+    if not updated_options.get('updated'):
+        task['updated'] = datetime.now().isoformat()
+    return _save_task(task)
