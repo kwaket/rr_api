@@ -47,4 +47,4 @@ def recognize(img_path):
                     i = i + 15 #skip a little
     Zlist.sort()
     # return str(Zlist) #if less then 5 digits recognized
-    return str(Zlist) if Zlist else None
+    return str(Zlist) if Zlist else ''
