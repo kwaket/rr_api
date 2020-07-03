@@ -1,6 +1,7 @@
 import re
 import typing
 import json
+from datetime import datetime
 
 import os
 
@@ -31,7 +32,7 @@ from random import randint
 class Application(BaseModel):
     """Application model"""
     id: str = None
-    created: str = None
+    created: datetime = None
     status: str = None
     result: str = None
 
@@ -41,8 +42,8 @@ class Task(BaseModel):
     id: str = None
     cadnum: str
     status: str = None
-    inserted: str = None
-    updated: str = None
+    inserted: datetime = None
+    updated: datetime = None
     application: Application = None
 
     @validator('cadnum')
