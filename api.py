@@ -64,7 +64,7 @@ async def get_main_page(api_key: APIKey = Depends(get_api_key)):
     description="Get task from database by id",
     response_model=Task
 )
-async def get_task_(task_id: str):
+async def get_task(task_id: str, api_key: APIKey = Depends(get_api_key)):
     try:
         task = services.get_task(task_id)
     except IndexError:
@@ -77,7 +77,7 @@ async def get_task_(task_id: str):
     response_description="Added task with *cadnum* parameter",
     response_model=Task,
 )
-async def add_task(task: Task):
+async def add_task(task: Task, api_key: APIKey = Depends(get_api_key)):
     task = services.add_task(task.cadnum)
     return task
 
