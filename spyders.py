@@ -195,11 +195,22 @@ class EGRNStatement(EGRNBase):
         code = self._recognize_captcha(captcha_pic)
         captcha_field = self.driver.find_element_by_xpath(
             '//div[@name="ibmMainContainer"]//input[@type="text"]')
+        time.sleep(1)
         while captcha_field.get_property('value') != code:
             captcha_field.clear()
             captcha_field.send_keys(code)
+            time.sleep(3)
+
+        # Иногда всплывает окно "ожидание ответа".
+        # Необходимо дождаться пока окно пропадет иначе программа падает
+        popup = self.driver.find_elements_by_class_name('popupContent')
+        popup = [e for e in popup if e.is_displayed()]
+        while popup:
+            popup = self.driver.find_elements_by_class_name('popupContent')
+            popup = [e for e in popup if e.is_displayed()]
             time.sleep(1)
 
+        time.sleep(3)
         self._wait_and_click('//span[text()="Отправить запрос"]')
 
         # Всплывающее окно
