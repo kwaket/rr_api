@@ -87,14 +87,14 @@ async def add_task(task: Task):
     return task
 
 
-@app.put(
-    "/tasks/{task_id}",
-    response_description="Update task with *id*",
-    response_model=Task,
-)
-async def update_task(task_id: str, task: Task):
-    task = services.update_task(task_id, task.dict())
-    return task
+# @app.put(
+#     "/tasks/{task_id}",
+#     response_description="Update task with *id*",
+#     response_model=Task,
+# )
+# async def update_task(task_id: str, task: Task, api_key: APIKey = Depends(get_api_key)):
+#     task = services.update_task(task_id, task.dict())
+#     return task
 
 
 

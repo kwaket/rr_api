@@ -49,25 +49,25 @@ def test_get_task():
     assert result["updated"]
 
 
-def test_update_task():
-    data = {
-        "cadnum": "50:26:0100213:15",
-        "id": TASK_ID,
-        "application": {
-            "id": "20-231432",
-            "status": "В работе",
-            "result": None
-        }
-    }
-    response = client.put(
-        "/tasks/" + TASK_ID,
-        headers={"access_token": os.getenv('API_KEY')},
-        json=data
-    )
-    assert response.status_code == 200
-    result = response.json()
-    assert result["cadnum"] == "50:26:0100213:15"
-    assert result["id"] == TASK_ID
-    assert result["application"]["id"] == data["application"]["id"]
-    assert result["application"]["status"] == data["application"]["status"]
-    assert result["application"]["result"] is None
+# def test_update_task():
+#     data = {
+#         "cadnum": "50:26:0100213:15",
+#         "id": TASK_ID,
+#         "application": {
+#             "id": "20-231432",
+#             "status": "В работе",
+#             "result": None
+#         }
+#     }
+#     response = client.put(
+#         "/tasks/" + TASK_ID,
+#         headers={"access_token": os.getenv('API_KEY')},
+#         json=data
+#     )
+#     assert response.status_code == 200
+#     result = response.json()
+#     assert result["cadnum"] == "50:26:0100213:15"
+#     assert result["id"] == TASK_ID
+#     assert result["application"]["id"] == data["application"]["id"]
+#     assert result["application"]["status"] == data["application"]["status"]
+#     assert result["application"]["result"] is None
