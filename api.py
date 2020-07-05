@@ -95,12 +95,3 @@ async def add_task(task: Task):
 # async def update_task(task_id: str, task: Task, api_key: APIKey = Depends(get_api_key)):
 #     task = services.update_task(task_id, task.dict())
 #     return task
-
-
-
-# @app.delete("/delete", response_description="Result of deleting")
-# async def delete(id: int):
-#     try:
-#         db.delete(id)
-#     except ValueError as e:
-#         raise HTTPException(404, str(e))
