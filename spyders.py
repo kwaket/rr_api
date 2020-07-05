@@ -3,6 +3,7 @@ import json
 from contextlib import suppress
 import time
 import logging
+from datetime import datetime
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException, TimeoutException
@@ -216,24 +217,22 @@ class EGRNStatement(EGRNBase):
         # Всплывающее окно
         ## Номер заявки
         result_elements = self._wait_element('//div[@class="popupContent"]//b')
-        logging.warning('result %s', result_elements)
+        logging.info('result %s', result_elements)
         if result_elements:
             application_id = result_elements.text
-            # print(application)
             task = services.update_task(task['id'], {
                 'application': {'id': application_id},
                 'status': TASK_STATUSES['added']})
-            logging.warning('Got application id %s', application_id )
+            logging.info('Got application id %s', application_id)
         else:
             message = self._wait_element('//div[@class="popupContent"]').text
-            logging.warning(message)
+            logging.info(message)
             task = services.update_task(task['id'], {
                 'status': TASK_STATUSES['error'],
                 'message': str(message)})
 
         ## Продолжить работу
         self.driver.find_element_by_xpath('//span[text()="Продолжить работу"]').click()
-
         return task
 
     @logger
