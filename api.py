@@ -1,18 +1,18 @@
-# from fastapi import FastAPI
-# from fastapi import HTTPException
-
-from schemas import Task
-import services
-# from services import get_task, add_task
 import os
 
 from fastapi import Security, Depends, FastAPI, HTTPException
 from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader, APIKey
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.openapi.utils import get_openapi
-
 from starlette.status import HTTP_403_FORBIDDEN
 from starlette.responses import RedirectResponse, JSONResponse
+from redis import Redis
+from rq import Queue
+
+from schemas import Task
+import services
+import tasks
+
+queue = Queue(connection=Redis())
+
 
 API_KEY = os.getenv('API_KEY')
 API_KEY_NAME = "access_token"
@@ -71,6 +71,17 @@ async def get_task(task_id: str, api_key: APIKey = Depends(get_api_key)):
         raise HTTPException(404, "No such task")
     return task
 
+@app.get(
+    "/tasks/{task_id}/update",
+    response_description="Task",
+    description="Get task from database by id",
+    response_model=Task
+)
+async def update_task_data(task_id: str, api_key: APIKey = Depends(get_api_key)):
+    task = services.update_task(
+        task_id, {"status": services.TASK_STATUSES['updating']})
+    queue.enqueue(tasks.update, task)
+    return task
 
 @app.post(
     "/tasks/",
@@ -79,6 +90,7 @@ async def get_task(task_id: str, api_key: APIKey = Depends(get_api_key)):
 )
 async def add_task(task: Task, api_key: APIKey = Depends(get_api_key)):
     task = services.add_task(task.cadnum)
+    queue.enqueue(tasks.execute, task)
     return task
 
 
