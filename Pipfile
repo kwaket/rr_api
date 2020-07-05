@@ -12,9 +12,10 @@ pillow = "*"
 ipdb = "*"
 click = "*"
 redis = "*"
-flask = "*"
-flask-restful = "*"
-flask-cors = "*"
+fastapi = "*"
+uvicorn = "*"
+pytest = "*"
+rq = "*"
 
 [requires]
 python_version = "3.7"
