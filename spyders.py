@@ -255,7 +255,8 @@ class EGRNStatement(EGRNBase):
         app_id, app_created, app_status = [c.text for c in cells[:3]]
         options = {'application': {
             'id': app_id,
-            'created': app_created,
+            'created': datetime.strptime(
+                app_created, '%d.%m.%Y %H:%M').isoformat(),
             'status': app_status}}
 
         if app_status == 'Завершена':
