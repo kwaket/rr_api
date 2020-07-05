@@ -36,11 +36,12 @@ def _save_task(task: dict) -> dict:
 
 def add_task(cadnum):
     task_id = _gen_id()
+    created = datetime.now().isoformat()
     task = {
         'id': task_id,
         'cadnum': cadnum,
-        'inserted': datetime.now().isoformat(),
-        'updated': None,
+        'inserted': created,
+        'updated': created,
         'status': None
     }
     task = _save_task(task)
