@@ -10,13 +10,14 @@ from rq import Queue
 from schemas import Task
 import services
 import tasks
+from settings import COOKIE_DOMAIN
 
 queue = Queue(connection=Redis())
 
 
 API_KEY = os.getenv('API_KEY')
 API_KEY_NAME = "access_token"
-COOKIE_DOMAIN = "localtest.me"
+COOKIE_DOMAIN = COOKIE_DOMAIN
 
 api_key_query = APIKeyQuery(name=API_KEY_NAME, auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
