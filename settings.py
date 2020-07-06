@@ -2,7 +2,7 @@ import os
 from contextlib import suppress
 
 
-TASK_DIR = 'tasks'
+TASK_DIR = os.path.join(os.getcwd(), 'tasks')
 EGRN_KEY = os.getenv('EGRN_KEY')
 COOKIE_DOMAIN = 'rr-api.space'
 
