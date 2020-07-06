@@ -12,6 +12,7 @@ import services
 import tasks
 from settings import COOKIE_DOMAIN
 
+
 queue = Queue(connection=Redis())
 
 
@@ -38,7 +39,17 @@ async def get_api_key(api_key_query: str = Security(api_key_query),
     )
 
 
-app = FastAPI(title='API для заказа выписок')
+tags_metadata = [
+    {
+        "name": "tasks",
+        "description": "Задачи используются для заказа. Как только выписке будет присвоен номер, он появиться в теле задачи в application",
+    }
+]
+
+app = FastAPI(title='Rostreestr applications API',
+              description="API для заказа выписок c сайта Росреестра",
+              version="0.1.1",
+              openapi_tags=tags_metadata)
 
 
 @app.get('/')
@@ -63,7 +74,8 @@ async def get_main_page(api_key: APIKey = Depends(get_api_key)):
     "/tasks/{task_id}",
     response_description="Task",
     description="Get task from database by id",
-    response_model=Task
+    response_model=Task,
+    tags=["tasks"]
 )
 async def get_task(task_id: str, api_key: APIKey = Depends(get_api_key)):
     try:
@@ -76,7 +88,8 @@ async def get_task(task_id: str, api_key: APIKey = Depends(get_api_key)):
     "/tasks/{task_id}/update",
     response_description="Task",
     description="Get task from database by id",
-    response_model=Task
+    response_model=Task,
+    tags=["tasks"]
 )
 async def update_task_data(task_id: str, api_key: APIKey = Depends(get_api_key)):
     task = services.update_task(
@@ -88,6 +101,7 @@ async def update_task_data(task_id: str, api_key: APIKey = Depends(get_api_key))
     "/tasks/",
     response_description="Added task with *cadnum* parameter",
     response_model=Task,
+    tags=["tasks"]
 )
 async def add_task(task: Task, api_key: APIKey = Depends(get_api_key)):
     task = services.add_task(task.cadnum)
