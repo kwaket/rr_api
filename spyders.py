@@ -13,12 +13,10 @@ from recognizer import recognize
 
 import services
 from services import TASK_STATUSES
-from settings import EGRN_KEY
+from settings import EGRN_KEY, SAVED_CAPTCHA, DATA_DRI
 
 
 SERVICE_URL = 'https://rosreestr.ru/wps/portal/online_request'
-SAVED_CAPTCHA = 'temp'
-DATA_DIR = 'data'
 
 
 logging.basicConfig(level=logging.INFO,

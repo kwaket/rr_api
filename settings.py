@@ -2,12 +2,13 @@ import os
 from contextlib import suppress
 
 
-TASK_DIR = os.path.join(os.getcwd(), 'tasks')
+DATA_DIR = os.path.join(os.getcwd(), 'data')
+TASK_DIR = os.path.join(os.getcwd(), 'data', 'tasks')
+SAVED_CAPTCHA = os.path.join(os.getcwd(), 'temp', 'captcha')
 EGRN_KEY = os.getenv('EGRN_KEY')
 COOKIE_DOMAIN = 'rr-api.space'
 
 
-if __name__ == '__main__':
-    with suppress(FileExistsError):
-        for path in [TASK_DIR]:
-            os.mkdir(path)
+with suppress(FileExistsError):
+    for path in [TASK_DIR, SAVED_CAPTCHA, DATA_DIR]:
+        os.makedirs(path)
