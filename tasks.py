@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from selenium.common.exceptions import WebDriverException
 
@@ -14,8 +15,9 @@ def _run_task_with_exception(function, task):
     try:
         function(task)
     except BaseException as exc:
+
         services.update_task(task['id'], {"status": "error"})
-        logging.error('stopped by worker %s', str(exc))
+        logging.error('stopped by worker %s', traceback.format_exc())
 
 
 
@@ -35,7 +37,7 @@ def update(task):
     pprint('updating task')
     pprint(task)
     spyder = EGRNStatement()
-    _run_task_with_exception(spyder.update_application_state, task)
+    _run_task_with_exception(spyder.update_application_state, task['id'])
     # try:
     #     spyder.update_application_state(task['id'])
     # except BaseException:
