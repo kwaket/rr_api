@@ -40,7 +40,7 @@ class Task(BaseModel):
 
     @validator('cadnum')
     def cadnum_must_match_pattern(cls, value):
-        res = re.match(r'^[\d]{2}\:[\d]{2}\:[\d]{6,7}\:[\d]{2}$', value)
+        res = re.match(r'^[\d]{2}\:[\d]{2}\:[\d]{6,7}\:[\d]{1,}$', value)
         if res:
             return value
         raise ValueError('Cadnum must match pattern АА:ВВ:CCCCСCC:КК')
