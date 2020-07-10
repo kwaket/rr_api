@@ -315,7 +315,7 @@ class EGRNStatement(EGRNBase):
             results = self._get_results()
             cells = results[0].find_elements_by_xpath('.//td')
             dwnld_btn = cells[-1].find_element_by_xpath('.//a')
-            dwnld_btn.click()
+            self._go(dwnld_btn.get_attribute('href'))
 
             while True:
                 time.sleep(1)
