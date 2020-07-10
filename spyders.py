@@ -14,7 +14,10 @@ from recognizer import recognize
 
 import services
 from services import TASK_STATUSES
-from settings import EGRN_KEY, SAVED_CAPTCHA, DATA_DRI
+from settings import (EGRN_KEY, SAVED_CAPTCHA, DATA_DIR, SAVED_RESPONSES,
+    APPLICATION_DIR)
+from utils import download_file, unzip_file, get_zip_content_list
+from xml_converter.main import get_html
 
 
 SERVICE_URL = 'https://rosreestr.ru/wps/portal/online_request'
@@ -50,14 +53,23 @@ class EGRNBase():
 
     def __init__(self):
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--remote-debugin-port=9222")
-        options.add_argument("--screen-size=1200x800")
-        self.driver = webdriver.Remote(
-            command_executor='http://localhost:4444/wd/hub',
-            desired_capabilities=options.to_capabilities())
+        prefs = {
+            "download.default_directory": SAVED_RESPONSES,
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True
+        }
+        options.add_experimental_option('prefs', prefs)
+        if os.getenv('RR_APPLICATIONS_API_CONFIG') == 'DEV':
+            self.driver = webdriver.Chrome(options=options)
+        else:
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--remote-debugin-port=9222")
+            options.add_argument("--screen-size=1200x800")
+            self.driver = webdriver.Remote(
+                command_executor='http://localhost:4444/wd/hub',
+                desired_capabilities=options.to_capabilities())
         # self.driver = webdriver.Chrome()
         self.driver.implicitly_wait(30)
         self.current_task_id = None
@@ -184,7 +196,7 @@ class EGRNStatement(EGRNBase):
         if not self.is_auth:
             self.login()
             time.sleep(5)
-            print('login succes')
+            logging.info('login succes')
         else:
             self._go('https://rosreestr.ru/wps/portal/p/cc_present/ir_egrn')
 
@@ -258,7 +270,6 @@ class EGRNStatement(EGRNBase):
         if not self.is_auth:
             self.login()
             time.sleep(5)
-            print('login succes')
         else:
             self._go('https://rosreestr.ru/wps/portal/p/cc_present/ir_egrn')
 
@@ -284,9 +295,42 @@ class EGRNStatement(EGRNBase):
             'status': app_status}}
 
         if app_status == 'Завершена':
-            print('downloading')
+            logging.info('downloading result')
+            time.sleep(2)
+            results = main_block.find_elements_by_class_name('v-table-table')
+            cells = results[0].find_elements_by_xpath('.//td')
+            dwnld_btn = cells[-1].find_element_by_xpath('.//a')
+            dwnld_btn.click()
+
+            while True:
+                time.sleep(1)
+                incompleted = os.listdir(SAVED_RESPONSES)
+                incompleted = [f for f in incompleted if f.endswith('.crdownload')]
+                if not incompleted:
+                    break
+
+            response_dir = os.path.join(SAVED_RESPONSES, app_id)
+            filename = os.path.join(SAVED_RESPONSES,
+                                    'Response-{}.zip'.format(app_id))
+            response_dir = unzip_file(filename, response_dir)
+            res = [f for f in os.listdir(response_dir) if f.endswith('.zip')][0]
+
+            xml_file = get_zip_content_list(
+                os.path.join(SAVED_RESPONSES, app_id, res))[0]
+            unzip_file(os.path.join(SAVED_RESPONSES, app_id, res), response_dir)
+
+            html = get_html(os.path.join(SAVED_RESPONSES, app_id, xml_file))
+
+            with suppress(FileExistsError):
+                os.makedirs(os.path.join(APPLICATION_DIR, app_id))
+
+            result_path = os.path.join(APPLICATION_DIR, app_id, 'result.html')
+            with open(result_path, 'wb') as wb:
+                wb.write(html)
+
             options['status'] = TASK_STATUSES['completed']
-            options['application']['result'] = 'results'
+            options['application']['result'] = '/tasks/{task_id}/application/result'
+            logging.info('downloading complete')
         else:
             options['status'] = TASK_STATUSES['added']
 
