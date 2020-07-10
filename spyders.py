@@ -7,7 +7,8 @@ from datetime import datetime
 import random
 
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.common.exceptions import (WebDriverException,
+    TimeoutException, StaleElementReferenceException)
 from selenium.webdriver.support.ui import WebDriverWait
 
 from recognizer import recognize
@@ -261,6 +262,13 @@ class EGRNStatement(EGRNBase):
         self.driver.find_element_by_xpath('//span[text()="Продолжить работу"]').click()
         return task
 
+    def _get_results(self):
+        main_block = self.driver.find_element_by_class_name('v-app')
+        results = main_block.find_elements_by_class_name('v-table-table')
+        if not results:
+            raise ValueError('Too much or too few results found')
+        return results
+
     @logger
     def update_application_state(self, task_id):
         self._set_task_id(task_id)
@@ -279,13 +287,20 @@ class EGRNStatement(EGRNBase):
         filter_input.send_keys(task['application']['id'])
 
         self._wait_and_click('//span[text() = "Обновить"]')
+        time.sleep(5)
 
-        main_block = self.driver.find_element_by_class_name('v-app')
-        results = main_block.find_elements_by_class_name('v-table-table')
-        if not results:
-            raise ValueError('Too much or too few results found')
-
-        cells = results[0].find_elements_by_xpath('.//td')
+        attempt = 10
+        while attempt:
+            try:
+                results = self._get_results()
+                cells = results[0].find_elements_by_xpath('.//td')
+            except StaleElementReferenceException:
+                logging.warning('Getting result again...')
+                self.driver.refresh()
+                attempt -= 1
+                time.sleep(1)
+            else:
+                break
 
         app_id, app_created, app_status = [c.text for c in cells[:3]]
         options = {'application': {
@@ -297,7 +312,7 @@ class EGRNStatement(EGRNBase):
         if app_status == 'Завершена':
             logging.info('downloading result')
             time.sleep(2)
-            results = main_block.find_elements_by_class_name('v-table-table')
+            results = self._get_results()
             cells = results[0].find_elements_by_xpath('.//td')
             dwnld_btn = cells[-1].find_element_by_xpath('.//a')
             dwnld_btn.click()
@@ -329,7 +344,7 @@ class EGRNStatement(EGRNBase):
                 wb.write(html)
 
             options['status'] = TASK_STATUSES['completed']
-            options['application']['result'] = '/tasks/{task_id}/application/result'
+            options['application']['result'] = '/tasks/{}/application/result'.format(task_id)
             logging.info('downloading complete')
         else:
             options['status'] = TASK_STATUSES['added']
