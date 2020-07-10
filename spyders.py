@@ -173,6 +173,7 @@ class EGRNStatement(EGRNBase):
             logging.warning('next_page_elem: %s\n', str(next_page_elem))
             time.sleep(3)
             logging.warning('trying to logging again')
+            self._save_exception_state(message='next elements is:' + str(next_page_elem))
             self._login()
             next_page_elem = self.driver.find_elements_by_xpath(
                 '//span[text()="Поиск объектов недвижимости"]')
