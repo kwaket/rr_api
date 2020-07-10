@@ -16,7 +16,7 @@ from recognizer import recognize
 import services
 from services import TASK_STATUSES
 from settings import (EGRN_KEY, SAVED_CAPTCHA, DATA_DIR, SAVED_RESPONSES,
-    APPLICATION_DIR)
+    APPLICATION_DIR, EXCEPTION_DIR)
 from utils import download_file, unzip_file, get_zip_content_list
 from xml_converter.main import get_html
 
@@ -140,6 +140,17 @@ class EGRNBase():
         for char in value:
             field.send_keys(char)
             time.sleep(random.uniform(.1, .5))
+
+    def _save_exception_state(self, message=None):
+        task_id = self.current_task_id or 'out_of_task'
+        timestamp = datetime.now().strftime('%d.%m.%y_%H%M%S,%f')
+        folder = os.path.join(EXCEPTION_DIR, task_id, timestamp)
+        self.driver.save_screenshot(os.path.join(folder, "error.png"))
+        with open(os.path.join(EXCEPTION_DIR, 'error.html'), 'w') as f:
+            f.write(self.driver.page_source)
+        if message and isinstance(message, str):
+            with open(os.path.join(EXCEPTION_DIR, 'message.txt'), 'w') as f:
+                f.write(message)
 
 
 class EGRNStatement(EGRNBase):
