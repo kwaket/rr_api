@@ -160,6 +160,7 @@ class EGRNStatement(EGRNBase):
         self.egrn_key = egrn_key or EGRN_KEY
         self.is_auth = False
         self.regions = json.load(open('regions.json'))
+        self.regions_map = json.load(open('regions_map.json'))
 
     @logger
     def login(self):
@@ -366,4 +367,8 @@ class EGRNStatement(EGRNBase):
         return task
 
     def _get_region(self, cadnum):
-        return self.regions[cadnum.split(':')[0]]
+        region = self.regions[cadnum.split(':')[0]]
+        if region in self.regions_map.keys():
+            region = self.regions_map[region]
+        return region
+
