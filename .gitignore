@@ -3,3 +3,7 @@ cadnums/*
 data/*
 temp/*
 tasks/*
+*.rdb
+*.jar
+*.zip
+download.txt
