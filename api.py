@@ -4,10 +4,11 @@ from fastapi import Security, Depends, FastAPI, HTTPException
 from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader, APIKey
 from starlette.status import HTTP_403_FORBIDDEN
 from starlette.responses import RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from redis import Redis
 from rq import Queue
 
-from schemas import Task
+from schemas import Task, Application
 import services
 import tasks
 from settings import COOKIE_DOMAIN
@@ -96,6 +97,41 @@ async def update_task_data(task_id: str, api_key: APIKey = Depends(get_api_key))
         task_id, {"status": services.TASK_STATUSES['updating']})
     queue.enqueue(tasks.update, task)
     return task
+
+
+@app.get(
+    "/tasks/{task_id}/application",
+    response_description="Application of task",
+    description="Get application from taks by task_id",
+    response_model=Application,
+    tags=["tasks"]
+)
+async def get_task_application(task_id: str, api_key: APIKey = Depends(get_api_key)):
+    try:
+        task = services.get_task(task_id)
+    except IndexError:
+        raise HTTPException(404, "No such task")
+    return task.get('application')
+
+
+@app.get(
+    "/tasks/{task_id}/application/result",
+    response_description="Result of application",
+    description="Get result of application by task_id",
+    response_class=HTMLResponse,
+    tags=["tasks"]
+)
+async def get_task_application_result(task_id: str, api_key: APIKey = Depends(get_api_key)):
+    try:
+        task = services.get_task(task_id)
+    except IndexError:
+        raise HTTPException(404, "No such task")
+    try:
+        application_result = services.get_application_result_from_task(task)
+    except FileNotFoundError:
+        raise HTTPException(404, "Result not ready")
+    return application_result
+
 
 @app.post(
     "/tasks/",

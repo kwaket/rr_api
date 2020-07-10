@@ -5,7 +5,7 @@ import json
 import hashlib
 from datetime import datetime
 
-from settings import TASK_DIR
+from settings import TASK_DIR, APPLICATION_DIR
 
 
 TASK_STATUSES = {
@@ -59,3 +59,8 @@ def update_task(task_id: str, updated_options: dict) -> dict:
     if not updated_options.get('updated'):
         task['updated'] = datetime.now().isoformat()
     return _save_task(task)
+
+def get_application_result_from_task(task: dict):
+    res = open(os.path.join(APPLICATION_DIR, task['application']['id'],
+        'result.html')).read()
+    return res
