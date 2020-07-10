@@ -129,7 +129,7 @@ async def get_task_application_result(task_id: str, api_key: APIKey = Depends(ge
     try:
         application_result = services.get_application_result_from_task(task)
     except FileNotFoundError:
-        raise HTTPException(404, "Result not ready")
+        raise HTTPException(404, "Result is not ready")
     return application_result
 
 
