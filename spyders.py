@@ -4,6 +4,7 @@ from contextlib import suppress
 import time
 import logging
 from datetime import datetime
+import random
 
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException, TimeoutException
@@ -122,6 +123,11 @@ class EGRNBase():
         filename = os.path.join(SAVED_CAPTCHA, element.id + '.png')
         return self._take_screenshot(element, filename)
 
+    def _fill_field(self, field, value):
+        for char in value:
+            field.send_keys(char)
+            time.sleep(random.uniform(.1, .5))
+
 
 class EGRNStatement(EGRNBase):
 
@@ -160,7 +166,7 @@ class EGRNStatement(EGRNBase):
             './/div[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
 
         for field, part in zip(key_fields, self.egrn_key.split('-')):
-            field.send_keys(part)
+            self._fill_field(field, part)
             time.sleep(1)
 
         _key_fields = self.driver.find_elements_by_xpath(
