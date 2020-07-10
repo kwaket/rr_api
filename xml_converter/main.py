@@ -72,32 +72,10 @@ def _make_dirs_tree(relative):
 
 
 def get_html(xml_filename, to_file=True):
-    # xml_filename = '../Response-80-144513894/kv_00a0c311-76c1-4178-aaad-b85f85d3b5f9.xml'
-    # os.chdir('xml_converter')
     xsl_filename = _get_xsl_filename(xml_filename)
     download_dependencies(xsl_filename)
     dom = ET.parse(xml_filename)
     xslt = ET.parse(xsl_filename)
     transform = ET.XSLT(xslt)
     newdom = transform(dom)
-    # result_file = 'result.html'
-    # # if to_file:
-    # #     with open(result_file, 'wb') as wb:
-    # #         wb.write(ET.tostring(newdom, pretty_print=True))
-    # #     print(os.getcwd())
-    # #     return result_file
     return ET.tostring(newdom, pretty_print=True)
-
-
-if __name__ == '__main__':
-    get_html('../Response-80-144513894/kv_00a0c311-76c1-4178-aaad-b85f85d3b5f9.xml')
-
-
-# 'schema/KVZU_v07/SchemaCommon/dCategories_v01.xsd'
-# 'https://portal.rosreestr.ru/xsl/EGRP/Reestr_Extract_Big/ZU/07/Common.xsl'
-
-# https://portal.rosreestr.ru/xsl/EGRP/schema/KVZU_v07/SchemaCommon/dCategories_v01.xsd
-# https://portal.rosreestr.ru/xsl/EGRP/Reestr_Extract_Big/ZU/07/Common.xsl
-
-# https://portal.rosreestr.ru/xsl/GKN/Vidimus/07/schema/KVZU_v07/SchemaCommon/dCategories_v01.xsd
-# https://portal.rosreestr.ru/xsl/GKN/Vidimus/07/dict/months.xml
