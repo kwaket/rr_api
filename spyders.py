@@ -154,6 +154,7 @@ class EGRNStatement(EGRNBase):
                 '//span[text()="Поиск объектов недвижимости"]')
             if next_page_elem:
                 self.is_auth = True
+                break
             attempts -= 1
         else:
             return True
