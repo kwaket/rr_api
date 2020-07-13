@@ -60,6 +60,7 @@ def update_task(task_id: str, updated_options: dict) -> dict:
         task['updated'] = datetime.now().isoformat()
     return _save_task(task)
 
+
 def get_application_result_from_task(task: dict):
     res = open(os.path.join(APPLICATION_DIR, task['application']['id'],
         'result.html')).read()
