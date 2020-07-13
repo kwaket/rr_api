@@ -74,7 +74,7 @@ async def get_main_page(api_key: APIKey = Depends(get_api_key)):
 @app.get(
     "/tasks/{task_id}",
     response_description="Task",
-    description="Get task from database by id",
+    description="Получить текущие данные задачи по id задачи",
     response_model=Task,
     tags=["tasks"]
 )
@@ -88,7 +88,7 @@ async def get_task(task_id: str, api_key: APIKey = Depends(get_api_key)):
 @app.get(
     "/tasks/{task_id}/update",
     response_description="Task",
-    description="Get task from database by id",
+    description="Обновить данные задачи, включая данные выписки по id задачи. Время обновления данных около 2 минут",
     response_model=Task,
     tags=["tasks"]
 )
@@ -102,7 +102,7 @@ async def update_task_data(task_id: str, api_key: APIKey = Depends(get_api_key))
 @app.get(
     "/tasks/{task_id}/application",
     response_description="Application of task",
-    description="Get application from taks by task_id",
+    description="Получить данные заявления по id задачи",
     response_model=Application,
     tags=["tasks"]
 )
@@ -117,7 +117,7 @@ async def get_task_application(task_id: str, api_key: APIKey = Depends(get_api_k
 @app.get(
     "/tasks/{task_id}/application/result",
     response_description="Result of application",
-    description="Get result of application by task_id",
+    description="Получить результат заявления по id задачи. Доступно если статус заявления **Завершено**",
     response_class=HTMLResponse,
     tags=["tasks"]
 )
@@ -136,6 +136,9 @@ async def get_task_application_result(task_id: str, api_key: APIKey = Depends(ge
 @app.post(
     "/tasks/",
     response_description="Added task with *cadnum* parameter",
+    description="""Добавить задачу для заказа выписки. Обязательный параметр **cadnum**.
+В результе запроса задаче будет присвоен id для дальнейшего отслеживания статуса задачи/заявления.
+Время получения номера заявления около 2 минут""",
     response_model=Task,
     tags=["tasks"]
 )
