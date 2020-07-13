@@ -1,42 +1,28 @@
 import re
 from datetime import datetime
-
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import validator
-
-from random import randint
+from enum import Enum
+from pydantic import BaseModel, validator
 
 
-# {
-#     "application": {
-#         "created": "03.07.2020 15:43",
-#         "id": "80-145486932",
-#         "status": "Проверка не пройдена  "
-#     },
-#     "cadnum": "50:26:0100213:15",
-#     "id": "2f9bdb1812e0f88175dc86476edfdb35",
-#     "inserted": "2020-07-03T15:43:18.573656",
-#     "status": "added",
-#     "updated": "2020-07-03T16:16:05.676780"
-# }
+class ApplicationStatus(str, Enum):
+    adding = 'adding'
+    added = 'added'
+    updating = 'updating'
+    update = 'updated'
+    error = 'error'
+
 
 class Application(BaseModel):
     """Application model"""
-    id: str = None
+    id: int = None  # "идентефикатор приложения (АПИшки)"
+    cadnum: str  # "кадастровый номер по которому делается выписка"
+    foreign_id: str = None  # "номер выписки (росреестровский)"
+    foreing_status: str = None  # "статус выписки (росреестровский)"
+    foreing_created: str = None # "время создания выписки (росреестровское)"
+    result: str = None  # "null или ссылка на html результат"
     created: datetime = None
-    status: str = None
-    result: str = None
-
-
-class Task(BaseModel):
-    """Task model"""
-    id: str = None
-    cadnum: str
-    status: str = None
-    inserted: datetime = None
-    updated: datetime = None
-    application: Application = None
+    updated_at: datetime = None  # "дата обновления (актуализации) данных с росреестра"
+    state: ApplicationStatus = None
 
     @validator('cadnum')
     def cadnum_must_match_pattern(cls, value):
