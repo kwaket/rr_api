@@ -1,3 +1,5 @@
+'''Module define data models for validation and serialization.'''
+
 import re
 from datetime import datetime
 from enum import Enum
