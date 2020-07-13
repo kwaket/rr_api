@@ -1,67 +1,65 @@
 '''Module define buisneess processes.'''
 
 import os
-import json
-import hashlib
+import glob
 from datetime import datetime
 
-from settings import TASK_DIR, APPLICATION_DIR
+import ujson
+
+from settings import APPLICATION_DIR
+from schemas import Application
 
 
-TASK_STATUSES = {
-    "adding": "adding",
-    "added": "added",
-    "updating": "updating",
-    "completed": "completed",
-    "error": "error"
-}
-
+def _extract_filename_without_ext(filepath):
+    filename = os.path.split(filepath)[-1]
+    return os.path.splitext(filename)[0]
 
 def _gen_id():
-    hsh = hashlib.md5(
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f").encode('utf8'))
-    return hsh.hexdigest()
+    last = [int(_extract_filename_without_ext(f)[0])
+            for f in glob.glob(os.path.join(APPLICATION_DIR, '*.json'))]
+    return max(last) + 1
 
 
-def _gen_filename(task_dir, task_id):
-    return os.path.join(task_dir, task_id + '.json')
+def _gen_filename(application_dir, application_id):
+    return os.path.join(application_dir, str(application_id) + '.json')
 
 
-def _save_task(task: dict) -> dict:
-    filepath = _gen_filename(TASK_DIR, task['id'])
+def _save_application(application: dict) -> Application:
+    filepath = _gen_filename(APPLICATION_DIR, application['id'])
+    application['id'] = int(application['id'])
     with open(filepath, 'w') as writer:
-        json.dump(task, writer)
-    return task
+        ujson.dump(application, writer)
+    return Application(**application)
 
 
-def add_task(cadnum):
-    task_id = _gen_id()
+def add_application(cadnum: str) -> Application:
     created = datetime.now().isoformat()
-    task = {
-        'id': task_id,
+    application = {
+        'id': _gen_id(),
         'cadnum': cadnum,
         'inserted': created,
         'updated': created,
         'status': None
     }
-    task = _save_task(task)
-    return task
+    application = _save_application(application)
+    return application
 
 
-def get_task(task_id: str) -> dict:
-    filename = _gen_filename(TASK_DIR, task_id)
-    return json.load(open(filename))
+def get_application(application_id: str) -> Application:
+    filename = _gen_filename(APPLICATION_DIR, application_id)
+    return Application(**ujson.load(open(filename)))
 
 
-def update_task(task_id: str, updated_options: dict) -> dict:
-    task = get_task(task_id)
-    task.update(updated_options)
-    if not updated_options.get('updated'):
-        task['updated'] = datetime.now().isoformat()
-    return _save_task(task)
+def update_application(updated_application: dict) -> Application:
+    application = get_application(updated_application['id'])
+    application_data = dict(application)
+    application_data.update(updated_application)
+    if not updated_application.get('updated'):
+        application_data['updated'] = datetime.now().isoformat()
+    return _save_application(application_data)
 
 
-def get_application_result_from_task(task: dict):
-    res = open(os.path.join(APPLICATION_DIR, task['application']['id'],
-        'result.html')).read()
+def get_application_result(application: dict):
+    res = open(os.path.join(APPLICATION_DIR, application['id'],
+                            'result.html')).read()
     return res
