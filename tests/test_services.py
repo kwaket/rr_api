@@ -4,6 +4,7 @@ import os
 from contextlib import suppress
 
 import services
+from schemas import Application
 from settings import APPLICATION_DIR
 
 TASK_ID = '666'
@@ -51,3 +52,9 @@ def test_update_application(application_data):
     updated = services.update_application(updated_application)
     assert updated.state == 'updating'
     assert updated.id == int(application_data['id'])
+
+
+def test_get_applications():
+    applications = services.get_applications(0, 10)
+    assert isinstance(applications, list)
+    assert isinstance(applications[0], Application)
