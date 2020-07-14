@@ -1,45 +1,43 @@
 import logging
 import traceback
 
-from selenium.common.exceptions import WebDriverException
-
-from spyders import EGRNStatement
-
-from pprint import pprint
-
+from spyders import EGRNApplication
+from schemas import Application, ApplicationStatus
+from types import FunctionType
 
 import services
 
 
-def _run_task_with_exception(function, task):
-    try:
-        function(task)
-    except BaseException as exc:
+def _mark_application_as_error(application_id):
+    application = services.get_application(application_id)
+    application.state = ApplicationStatus.error
+    application = services.update_application(application.id,
+                                              dict(application))
+    return application
 
-        services.update_task(task['id'], {"status": "error"})
+
+def _run_application_with_exception(function: FunctionType, application_id: int):
+    try:
+        function(application_id)
+    except Exception:
+        _mark_application_as_error(application_id)
+        logging.error('spyder exception %s', traceback.format_exc())
+    except BaseException:
+        _mark_application_as_error(application_id)
         logging.error('stopped by worker %s', traceback.format_exc())
 
 
-
-def execute(task):
-    pprint('task added')
-    pprint(task)
-    spyder = EGRNStatement()
-    _run_task_with_exception(spyder.get_application, task)
-    # try:
-    #     spyder.get_application(task)
-    # except BaseException:
-    #     update_task(task['id'], {"status": "error"})
+def order_application(application: Application):
+    '''Order application on rosreestr.ru'''
+    logging.info('application added: %s' % str(application))
+    spyder = EGRNApplication()
+    _run_application_with_exception(spyder.order_application, application.id)
     spyder.close()
 
 
-def update(task):
-    pprint('updating task')
-    pprint(task)
-    spyder = EGRNStatement()
-    _run_task_with_exception(spyder.update_application_state, task['id'])
-    # try:
-    #     spyder.update_application_state(task['id'])
-    # except BaseException:
-    #     update_task(task['id'], {"status": "error"})
+def update_application_data(application: Application):
+    '''Update application data (status, result) for rosreestr.ru'''
+    logging.info('updating application data: %s' % str(application))
+    spyder = EGRNApplication()
+    _run_application_with_exception(spyder.update_application_state, application.id)
     spyder.close()
