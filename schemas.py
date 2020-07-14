@@ -10,7 +10,8 @@ class ApplicationStatus(str, Enum):
     adding = 'adding'
     added = 'added'
     updating = 'updating'
-    update = 'updated'
+    updated = 'updated'
+    completed = 'completed'
     error = 'error'
 
 
@@ -22,8 +23,8 @@ class Application(BaseModel):
     foreing_status: str = None  # "статус выписки (росреестровский)"
     foreing_created: str = None # "время создания выписки (росреестровское)"
     result: str = None  # "null или ссылка на html результат"
-    created: datetime = None
-    updated_at: datetime = None  # "дата обновления (актуализации) данных с росреестра"
+    inserted: datetime = None
+    updated: datetime = None  # "дата обновления (актуализации) данных с росреестра"
     state: ApplicationStatus = None
 
     @validator('cadnum')
