@@ -20,8 +20,8 @@ class Application(BaseModel):
     id: int = None  # "идентефикатор приложения (АПИшки)"
     cadnum: str  # "кадастровый номер по которому делается выписка"
     foreign_id: str = None  # "номер выписки (росреестровский)"
-    foreing_status: str = None  # "статус выписки (росреестровский)"
-    foreing_created: str = None # "время создания выписки (росреестровское)"
+    foreign_status: str = None  # "статус выписки (росреестровский)"
+    foreign_created: str = None # "время создания выписки (росреестровское)"
     result: str = None  # "null или ссылка на html результат"
     inserted: datetime = None
     updated: datetime = None  # "дата обновления (актуализации) данных с росреестра"
