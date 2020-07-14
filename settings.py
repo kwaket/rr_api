@@ -12,7 +12,7 @@ EGRN_KEY = os.getenv('EGRN_KEY')
 COOKIE_DOMAIN = 'rr-api.space'
 
 
-for path in [TASK_DIR, SAVED_CAPTCHA, DATA_DIR, SAVED_RESPONSES,
+for path in [SAVED_CAPTCHA, DATA_DIR, SAVED_RESPONSES,
              APPLICATION_DIR, EXCEPTION_DIR]:
     with suppress(FileExistsError):
         os.makedirs(path)
