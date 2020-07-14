@@ -7,30 +7,23 @@ from datetime import datetime
 import random
 
 from selenium import webdriver
-from selenium.common.exceptions import (WebDriverException,
-    TimeoutException, StaleElementReferenceException)
+from selenium.common.exceptions import (
+    WebDriverException, TimeoutException, StaleElementReferenceException,
+    NoSuchElementException)
 from selenium.webdriver.support.ui import WebDriverWait
 
 from recognizer import recognize
 
 import services
-from services import TASK_STATUSES
-from settings import (EGRN_KEY, SAVED_CAPTCHA, DATA_DIR, SAVED_RESPONSES,
-    APPLICATION_DIR, EXCEPTION_DIR)
+from settings import (EGRN_KEY, SAVED_CAPTCHA, SAVED_RESPONSES,
+                      APPLICATION_DIR, EXCEPTION_DIR)
 from utils import download_file, unzip_file, get_zip_content_list
 from xml_converter.main import get_html
-
-
-SERVICE_URL = 'https://rosreestr.ru/wps/portal/online_request'
+from schemas import ApplicationStatus
 
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
-
-
-with suppress(FileExistsError):
-    for path in [SAVED_CAPTCHA, DATA_DIR]:
-        os.mkdir(path)
 
 
 def clean_key(word):
@@ -41,11 +34,11 @@ def clean_key(word):
 
 def logger(func):
     def wrapper(*args, **kwargs):
-        task_id = args[0].current_task_id or 'Out of task'
-        logging.info('%s: start %s. Args: %s, kwargs, %s', task_id,
+        application_id = args[0].current_application_id or 'Out of task'
+        logging.info('%s: start %s. Args: %s, kwargs, %s', application_id,
                      func.__name__, str(args), str(kwargs))
         res = func(*args, **kwargs)
-        logging.info('%s: end %s', task_id, func.__name__)
+        logging.info('%s: end %s', application_id, func.__name__)
         return res
     return wrapper
 
@@ -73,11 +66,11 @@ class EGRNBase():
                 desired_capabilities=options.to_capabilities())
         # self.driver = webdriver.Chrome()
         self.driver.implicitly_wait(30)
-        self.current_task_id = None
+        self.current_application_id = None
 
-    def _set_task_id(self, task_id):
-        self.current_task_id = task_id
-        return self.current_task_id
+    def _set_application_id(self, application_id):
+        self.current_application_id = application_id
+        return self.current_application_id
 
     @logger
     def close(self):
@@ -86,7 +79,6 @@ class EGRNBase():
 
     @logger
     def _go(self, url):
-        # return self.driver.get(url)
         while True:
             try:
                 self.driver.get(url)
@@ -136,15 +128,16 @@ class EGRNBase():
         filename = os.path.join(SAVED_CAPTCHA, element.id + '.png')
         return self._take_screenshot(element, filename)
 
-    def _fill_field(self, field, value):
+    @staticmethod
+    def _fill_field(field, value):
         for char in value:
             field.send_keys(char)
-            time.sleep(random.uniform(.1, .5))
+            time.sleep(random.uniform(.1, .3))
 
     def _save_exception_state(self, message=None):
-        task_id = self.current_task_id or 'out_of_task'
+        application_id = self.current_application_id or 'out_of_task'
         timestamp = datetime.now().strftime('%d.%m.%y_%H%M%S,%f')
-        folder = os.path.join(EXCEPTION_DIR, task_id, timestamp)
+        folder = os.path.join(EXCEPTION_DIR, application_id, timestamp)
         self.driver.save_screenshot(os.path.join(folder, "error.png"))
         with open(os.path.join(EXCEPTION_DIR, 'error.html'), 'w') as f:
             f.write(self.driver.page_source)
@@ -153,7 +146,7 @@ class EGRNBase():
                 f.write(message)
 
 
-class EGRNStatement(EGRNBase):
+class EGRNApplication(EGRNBase):
 
     def __init__(self, egrn_key=None):
         EGRNBase.__init__(self)
@@ -201,12 +194,19 @@ class EGRNStatement(EGRNBase):
         _key = '-'.join([k.text for k in _key_fields])
         assert _key != self.egrn_key
         time.sleep(1)
+        try:
+            self.driver.find_element_by_xpath('//span[text()="Войти"]').click()
+        except NoSuchElementException:
+            self.driver.refresh()
         self.driver.find_element_by_xpath('//span[text()="Войти"]').click()
 
     @logger
-    def get_application(self, task):
-        self._set_task_id(task['id'])
-        task = services.update_task(task['id'], {'status': TASK_STATUSES['adding']})
+    def order_application(self, application_id):
+        self._set_application_id(application_id)
+        application = services.get_application(application_id)
+        application.state = ApplicationStatus.adding
+        application = services.update_application(application.id,
+                                                  dict(application))
         if not self.is_auth:
             self.login()
             time.sleep(5)
@@ -220,8 +220,8 @@ class EGRNStatement(EGRNBase):
                            timeout=20)
         fields = self.driver.find_elements_by_xpath('//*[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
         cadnum_field, region_field = fields[0], fields[2]
-        cadnum_field.send_keys(task['cadnum'])
-        region = self._get_region(task['cadnum'])
+        cadnum_field.send_keys(application.cadnum)
+        region = self._get_region(application.cadnum)
         region_field.send_keys(region)
         self._wait_element('//*[@id="VAADIN_COMBOBOX_OPTIONLIST"]')
         xpath = '//*[@id="VAADIN_COMBOBOX_OPTIONLIST"]//*[text()="{}"]'
@@ -259,21 +259,19 @@ class EGRNStatement(EGRNBase):
         result_elements = self._wait_element('//div[@class="popupContent"]//b')
         logging.info('result %s', result_elements)
         if result_elements:
-            application_id = result_elements.text
-            task = services.update_task(task['id'], {
-                'application': {'id': application_id},
-                'status': TASK_STATUSES['added']})
-            logging.info('Got application id %s', application_id)
+            application = services.update_application(application.id,
+                                                      {'foreign_id': result_elements.text,
+                                                       'status': ApplicationStatus.added})
+            logging.info('Got application id %s', application.foreign_id)
         else:
             message = self._wait_element('//div[@class="popupContent"]').text
             logging.info(message)
-            task = services.update_task(task['id'], {
-                'status': TASK_STATUSES['error'],
-                'message': str(message)})
-
+            application = services.update_application(application.id,
+                                                      {'status': ApplicationStatus.error,
+                                                       'message': str(message)})
         ## Продолжить работу
         self.driver.find_element_by_xpath('//span[text()="Продолжить работу"]').click()
-        return task
+        return application
 
     def _get_results(self):
         main_block = self.driver.find_element_by_class_name('v-app')
@@ -283,11 +281,11 @@ class EGRNStatement(EGRNBase):
         return results
 
     @logger
-    def update_application_state(self, task_id):
-        self._set_task_id(task_id)
-        task = services.get_task(task_id)
-
-        services.update_task(task_id, {'status': TASK_STATUSES['updating']})
+    def update_application_state(self, application_id: int):
+        self._set_application_id(application_id)
+        application = services.get_application(application_id)
+        application = services.update_application(application.id,
+                                                  {'status': ApplicationStatus.updating})
         if not self.is_auth:
             self.login()
             time.sleep(5)
@@ -297,7 +295,7 @@ class EGRNStatement(EGRNBase):
         self._wait_and_click('//span[text()="Мои заявки"]', timeout=10)
 
         filter_input = self.driver.find_element_by_class_name('v-textfield')
-        filter_input.send_keys(task['application']['id'])
+        filter_input.send_keys(application.foreign_id)
 
         self._wait_and_click('//span[text() = "Обновить"]')
         time.sleep(5)
@@ -316,11 +314,11 @@ class EGRNStatement(EGRNBase):
                 break
 
         app_id, app_created, app_status = [c.text for c in cells[:3]]
-        options = {'application': {
-            'id': app_id,
-            'created': datetime.strptime(
+        options = {
+            'foreign_id': app_id,
+            'foreign_created': datetime.strptime(
                 app_created, '%d.%m.%Y %H:%M').isoformat(),
-            'status': app_status}}
+            'foreign_status': app_status}
 
         if app_status == 'Завершена':
             logging.info('downloading result')
@@ -356,19 +354,19 @@ class EGRNStatement(EGRNBase):
             with open(result_path, 'wb') as wb:
                 wb.write(html)
 
-            options['status'] = TASK_STATUSES['completed']
-            options['application']['result'] = '/tasks/{}/application/result'.format(task_id)
+            options['status'] = ApplicationStatus.completed
+            options['result'] = '/api/application/{application_id}/result'.format(
+                application_id=application_id)
             logging.info('downloading complete')
         else:
-            options['status'] = TASK_STATUSES['added']
+            options['status'] = ApplicationStatus.added
 
-        task = services.update_task(task_id, options)
+        application = services.update_application(application.id, options)
 
-        return task
+        return application
 
     def _get_region(self, cadnum):
         region = self.regions[cadnum.split(':')[0]]
         if region in self.regions_map.keys():
             region = self.regions_map[region]
         return region
-
