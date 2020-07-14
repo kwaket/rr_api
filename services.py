@@ -63,3 +63,8 @@ def get_application_result(application: dict):
     res = open(os.path.join(APPLICATION_DIR, application['id'],
                             'result.html')).read()
     return res
+
+
+def get_applications(skip: int, limit: int) -> list:
+    applications = glob.glob(os.path.join(APPLICATION_DIR, '*.json'))
+    return [Application(**ujson.load(open(f))) for f in applications]
