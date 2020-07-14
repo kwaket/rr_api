@@ -99,9 +99,9 @@ async def get_application(application_id: str,
 )
 async def update_application_data(application_id: str,
                                   api_key: APIKey = Depends(get_api_key)):
-    application = services.update_application(
-        {"id": application_id, "status": ApplicationStatus.updating})
-    queue.enqueue(tasks.update, application)
+    application = services.update_application(application_id,
+        {"status": ApplicationStatus.updating})
+    queue.enqueue(tasks.update_application_data, application)
     return application
 
 
@@ -139,5 +139,5 @@ async def get_application_result(application_id: str,
 async def add_application(application: Application,
                           api_key: APIKey = Depends(get_api_key)):
     application = services.add_application(application.cadnum)
-    queue.enqueue(tasks.execute, application)
+    queue.enqueue(tasks.order_application, application)
     return application
