@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 from redis import Redis
 from rq import Queue
 
-from schemas import Task, Application
+from schemas import Application, ApplicationStatus
 import services
 import tasks
 from settings import COOKIE_DOMAIN
@@ -42,117 +42,102 @@ async def get_api_key(api_key_query: str = Security(api_key_query),
 
 tags_metadata = [
     {
-        "name": "tasks",
-        "description": "Задачи используются для заказа. Как только выписке будет присвоен номер, он появиться в теле задачи в application",
+        "name": "applications",
+        "description": """В заявлениях используется id назначаемый приложением.
+            Внешний id (номер заявления) присваивается в течении 1 минуты в поле **foreign_id**""",
     }
 ]
 
 app = FastAPI(title='Rostreestr applications API',
               description="API для заказа выписок c сайта Росреестра",
-              version="0.1.1",
+              version="0.2.0",
               openapi_tags=tags_metadata)
 
 
-@app.get('/')
+@app.get('/api')
 async def get_main_page(api_key: APIKey = Depends(get_api_key)):
     return {'name': 'API для заказа выписок'}
 
-# @app.get(
-#     "/tasks/",
-#     response_description="Tasks",
-#     description="Get list of tasks",
-#     response_model=list
-# )
-# async def get_tasks(skip: int = 0, limit: int = 10):
-#     try:
-#         tasks = get_tasks(skip, limit)
-#     except IndexError:
-#         raise HTTPException(404, "No such tasks")
-#     return tasks
-
-
 @app.get(
-    "/tasks/{task_id}",
-    response_description="Task",
-    description="Получить текущие данные задачи по id задачи",
-    response_model=Task,
-    tags=["tasks"]
+    "/api/applications/",
+    response_description="applications",
+    description="Получить список заявлений",
+    response_model=list,
+    tags=["applications"]
 )
-async def get_task(task_id: str, api_key: APIKey = Depends(get_api_key)):
+async def get_applications(skip: int = 0, limit: int = 10,
+                           api_key: APIKey = Depends(get_api_key)):
     try:
-        task = services.get_task(task_id)
+        applications = services.get_applications(skip, limit)
     except IndexError:
-        raise HTTPException(404, "No such task")
-    return task
-
-@app.get(
-    "/tasks/{task_id}/update",
-    response_description="Task",
-    description="Обновить данные задачи, включая данные выписки по id задачи. Время обновления данных около 2 минут",
-    response_model=Task,
-    tags=["tasks"]
-)
-async def update_task_data(task_id: str, api_key: APIKey = Depends(get_api_key)):
-    task = services.update_task(
-        task_id, {"status": services.TASK_STATUSES['updating']})
-    queue.enqueue(tasks.update, task)
-    return task
+        raise HTTPException(404, "No such applications")
+    return applications
 
 
 @app.get(
-    "/tasks/{task_id}/application",
-    response_description="Application of task",
-    description="Получить данные заявления по id задачи",
+    "/api/applications/{application_id}",
+    response_description="Application",
+    description="Получить заявление по id",
     response_model=Application,
-    tags=["tasks"]
+    tags=["applications"]
 )
-async def get_task_application(task_id: str, api_key: APIKey = Depends(get_api_key)):
+async def get_application(application_id: str,
+                          api_key: APIKey = Depends(get_api_key)):
     try:
-        task = services.get_task(task_id)
-    except IndexError:
-        raise HTTPException(404, "No such task")
-    return task.get('application')
+        application = services.get_application(application_id)
+    except FileNotFoundError:
+        raise HTTPException(404, "No such application")
+    return application
+
+@app.get(
+    "/api/applications/{application_id}/update",
+    response_description="Application",
+    description="""Обновить данные заявления по id.
+        Время обновления данных около 2 минут""",
+    response_model=Application,
+    tags=["applications"]
+)
+async def update_application_data(application_id: str,
+                                  api_key: APIKey = Depends(get_api_key)):
+    application = services.update_application(
+        {"id": application_id, "status": ApplicationStatus.updating})
+    queue.enqueue(tasks.update, application)
+    return application
 
 
 @app.get(
-    "/tasks/{task_id}/application/result",
+    "/api/applications/{application_id}/result",
     response_description="Result of application",
-    description="Получить результат заявления по id задачи. Доступно если статус заявления **Завершено**",
+    description="""Получить результат заявления по id.
+        Доступно если статус заявления **Завершено**""",
     response_class=HTMLResponse,
-    tags=["tasks"]
+    tags=["applications"]
 )
-async def get_task_application_result(task_id: str, api_key: APIKey = Depends(get_api_key)):
+async def get_application_result(application_id: str,
+                                 api_key: APIKey = Depends(get_api_key)):
     try:
-        task = services.get_task(task_id)
-    except IndexError:
+        application = services.get_application(application_id)
+    except FileNotFoundError:
         raise HTTPException(404, "No such task")
     try:
-        application_result = services.get_application_result_from_task(task)
+        application_result = services.get_application_result(application)
     except FileNotFoundError:
         raise HTTPException(404, "Result is not ready")
     return application_result
 
 
 @app.post(
-    "/tasks/",
+    "/api/applications/",
     response_description="Added task with *cadnum* parameter",
-    description="""Добавить задачу для заказа выписки. Обязательный параметр **cadnum**.
-В результе запроса задаче будет присвоен id для дальнейшего отслеживания статуса задачи/заявления.
-Время получения номера заявления около 2 минут""",
-    response_model=Task,
-    tags=["tasks"]
+    description="""Заказать выписку. Обязательный параметр **cadnum**.
+        В результе запроса заявлению будет присвоен id (внутренний)
+        для дальнейшего отслеживания статуса заявления.
+        Время получения номера заявления около 2 минут""",
+    response_model=Application,
+    tags=["applications"]
 )
-async def add_task(task: Task, api_key: APIKey = Depends(get_api_key)):
-    task = services.add_task(task.cadnum)
-    queue.enqueue(tasks.execute, task)
-    return task
-
-
-# @app.put(
-#     "/tasks/{task_id}",
-#     response_description="Update task with *id*",
-#     response_model=Task,
-# )
-# async def update_task(task_id: str, task: Task, api_key: APIKey = Depends(get_api_key)):
-#     task = services.update_task(task_id, task.dict())
-#     return task
+async def add_application(application: Application,
+                          api_key: APIKey = Depends(get_api_key)):
+    application = services.add_application(application.cadnum)
+    queue.enqueue(tasks.execute, application)
+    return application
