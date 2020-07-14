@@ -18,6 +18,7 @@ pytest = "*"
 rq = "*"
 requests = "*"
 lxml = "*"
+ujson = "*"
 
 [requires]
 python_version = "3.8"
