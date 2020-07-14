@@ -3,7 +3,6 @@ from contextlib import suppress
 
 
 DATA_DIR = os.path.join(os.getcwd(), 'data')
-TASK_DIR = os.path.join(os.getcwd(), 'data', 'tasks')
 APPLICATION_DIR = os.path.join(os.getcwd(), 'data', 'applications')
 EXCEPTION_DIR = os.path.join(os.getcwd(), 'temp', 'exceptions')
 SAVED_CAPTCHA = os.path.join(os.getcwd(), 'temp', 'captcha')
