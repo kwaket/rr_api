@@ -1,12 +1,12 @@
 import os
 
+from redis import Redis
 from fastapi import Security, Depends, FastAPI, HTTPException
 from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader, APIKey
 from starlette.status import HTTP_403_FORBIDDEN
 from starlette.responses import RedirectResponse, JSONResponse
-from fastapi.responses import HTMLResponse
-from redis import Redis
 from rq import Queue
+from fastapi.responses import HTMLResponse
 
 from schemas import Application, ApplicationStatus
 import services
@@ -100,7 +100,7 @@ async def get_application(application_id: int,
 async def update_application_data(application_id: int,
                                   api_key: APIKey = Depends(get_api_key)):
     application = services.update_application(application_id,
-        {"status": ApplicationStatus.updating})
+                                              {"status": ApplicationStatus.updating})
     queue.enqueue(tasks.update_application_data, application)
     return application
 
