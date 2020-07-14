@@ -81,7 +81,7 @@ async def get_applications(skip: int = 0, limit: int = 10,
     response_model=Application,
     tags=["applications"]
 )
-async def get_application(application_id: str,
+async def get_application(application_id: int,
                           api_key: APIKey = Depends(get_api_key)):
     try:
         application = services.get_application(application_id)
@@ -97,7 +97,7 @@ async def get_application(application_id: str,
     response_model=Application,
     tags=["applications"]
 )
-async def update_application_data(application_id: str,
+async def update_application_data(application_id: int,
                                   api_key: APIKey = Depends(get_api_key)):
     application = services.update_application(application_id,
         {"status": ApplicationStatus.updating})
@@ -113,7 +113,7 @@ async def update_application_data(application_id: str,
     response_class=HTMLResponse,
     tags=["applications"]
 )
-async def get_application_result(application_id: str,
+async def get_application_result(application_id: int,
                                  api_key: APIKey = Depends(get_api_key)):
     try:
         application = services.get_application(application_id)
