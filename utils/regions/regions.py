@@ -11,11 +11,11 @@ class Region():
         self.regions_map = ujson.load(
             open(os.path.join('utils', 'regions', 'regions_map.json')))
 
-    def get_region(self, cadnum):
+    def get_region(self, cadnum: str) -> str:
         '''Возвращает название региона по кадастровому номеру.'''
-        return self.regions[cadnum.split(':')[0]]
+        return str(self.regions[cadnum.split(':')[0]])
 
-    def get_region_rr(self, cadnum):
+    def get_region_rr(self, cadnum: str) -> str:
         '''Возвращает название региона по кадастровому номеру.
         Название соответствует названию на сайте Росреестра
         '''
