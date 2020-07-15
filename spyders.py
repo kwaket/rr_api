@@ -26,6 +26,9 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+AUTH_ATTEMPTS = 5
+
+
 def clean_key(word):
     if word.endswith(':'):
         word = word[:-1]
@@ -165,48 +168,46 @@ class EGRNApplication(EGRNBase):
 
     @logger
     def login(self):
-        self._login()
-        next_page_elem = self._wait_element(
-            '//span[text()="Поиск объектов недвижимости"]', timeout=10)
-
-        self.is_auth = bool(next_page_elem)
-        attempts = 5
-        while not self.is_auth and attempts:
-            logging.warning('next_page_elem: %s\n', str(next_page_elem))
-            time.sleep(3)
-            logging.warning('trying to logging again')
-            self._save_exception_state(message='next elements is:' + str(next_page_elem))
-            self._login()
-            next_page_elem = self.driver.find_elements_by_xpath(
-                '//span[text()="Поиск объектов недвижимости"]')
-            if next_page_elem:
-                self.is_auth = True
-                break
-            attempts -= 1
-        else:
+        self.is_auth = self._login()
+        if self.is_auth:
             return True
-        raise WebDriverException
+        attempts = AUTH_ATTEMPTS
+        while not self.is_auth and attempts:
+            attempts -= 1
+            self._save_exception_state(message='auth false')
+            logging.warning('Try to loggin again. Attempts left: %s' % attempts)
+            self.is_auth = self._login()
+            if self.is_auth:
+                return True
+        raise ExecutorError(
+            """Не удалось авторизоваться на сервисе росреестра. Количество попыток: %s"""
+            % AUTH_ATTEMPTS)
 
     def _login(self):
-        self._go('https://rosreestr.ru/wps/portal/p/cc_present/ir_egrn')
+        self._go_to_service()
         self._wait_element('.//div[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input', 5)
         key_fields = self.driver.find_elements_by_xpath(
             './/div[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
-
         for field, part in zip(key_fields, self.egrn_key.split('-')):
+            field.clear()
             self._fill_field(field, part)
             time.sleep(1)
-
         _key_fields = self.driver.find_elements_by_xpath(
             './/div[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
-        _key = '-'.join([k.text for k in _key_fields])
-        assert _key != self.egrn_key
-        time.sleep(1)
-        try:
-            self.driver.find_element_by_xpath('//span[text()="Войти"]').click()
-        except NoSuchElementException:
-            self.driver.refresh()
-        self.driver.find_element_by_xpath('//span[text()="Войти"]').click()
+        _key = '-'.join([k.get_attribute('value') for k in _key_fields])
+        if _key != self.egrn_key:
+            return False
+
+        self._wait_and_click('//span[text()="Войти"]')
+
+        next_page_elem_xpath = '//span[text()="Поиск объектов недвижимости"]'
+        self._wait_element(next_page_elem_xpath, timeout=10)
+        next_page_element = self.driver.find_elements_by_xpath(
+            next_page_elem_xpath)
+        if not next_page_element:
+            logging.info('%s: next element page not found',
+                         self.current_application_id)
+        return next_page_element
 
     @logger
     def order_application(self, application_id):
