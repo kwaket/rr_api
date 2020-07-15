@@ -43,6 +43,10 @@ def logger(func):
     return wrapper
 
 
+class ExecutorError(Exception):
+    pass
+
+
 class EGRNBase():
 
     def __init__(self):
@@ -135,14 +139,18 @@ class EGRNBase():
             time.sleep(random.uniform(.1, .3))
 
     def _save_exception_state(self, message=None):
-        application_id = self.current_application_id or 'out_of_task'
-        timestamp = datetime.now().strftime('%d.%m.%y_%H%M%S,%f')
-        folder = os.path.join(EXCEPTION_DIR, application_id, timestamp)
+        application_id = str(self.current_application_id) or 'out_of_task'
+        now = datetime.now()
+        day = now.strftime('%d.%m.%y')
+        time_ = now.strftime('%H%M%S_%f')
+        folder = os.path.join(EXCEPTION_DIR, application_id, day, time_)
+        with suppress(FileExistsError):
+            os.makedirs(folder)
         self.driver.save_screenshot(os.path.join(folder, "error.png"))
-        with open(os.path.join(EXCEPTION_DIR, 'error.html'), 'w') as f:
+        with open(os.path.join(folder, 'error.html'), 'w') as f:
             f.write(self.driver.page_source)
         if message and isinstance(message, str):
-            with open(os.path.join(EXCEPTION_DIR, 'message.txt'), 'w') as f:
+            with open(os.path.join(folder, 'message.txt'), 'w') as f:
                 f.write(message)
 
 
