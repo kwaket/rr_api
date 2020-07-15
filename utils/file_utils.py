@@ -18,5 +18,6 @@ def unzip_file(zip_path, dest_path):
 
 
 def get_zip_content_list(zip_path):
+    # exceptions
     f = zipfile.ZipFile(zip_path)
     return f.namelist()
