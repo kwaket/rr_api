@@ -8,7 +8,7 @@ from starlette.responses import RedirectResponse, JSONResponse
 from rq import Queue
 from fastapi.responses import HTMLResponse
 
-from schemas import Application, ApplicationStatus
+from schemas import Application, ApplicationState
 import services
 from settings import COOKIE_DOMAIN
 
@@ -99,7 +99,7 @@ async def get_application(application_id: int,
 async def update_application_data(application_id: int,
                                   api_key: APIKey = Depends(get_api_key)):
     application = services.update_application(application_id,
-                                              {"status": ApplicationStatus.updating})
+                                              {"status": ApplicationState.updating})
     queue.enqueue(services.update_application_data, application)
     return application
 

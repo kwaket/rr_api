@@ -6,7 +6,7 @@ from enum import Enum
 from pydantic import BaseModel, validator
 
 
-class ApplicationStatus(str, Enum):
+class ApplicationState(str, Enum):
     adding = 'adding'
     added = 'added'
     updating = 'updating'

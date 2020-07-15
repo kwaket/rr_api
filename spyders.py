@@ -20,7 +20,7 @@ from utils.recognizer import recognize
 from utils.file_utils import unzip_file, get_zip_content_list
 from utils.xml_converter import get_html
 from utils.regions.regions import Region
-from schemas import ApplicationStatus
+from schemas import ApplicationState
 
 
 logging.basicConfig(level=logging.INFO,
@@ -230,7 +230,7 @@ class EGRNApplication(EGRNBase):
     def order_application(self, application_id):
         self._set_application_id(application_id)
         application = services.get_application(application_id)
-        application.state = ApplicationStatus.adding
+        application.state = ApplicationState.adding
         application = services.update_application(application.id,
                                                   dict(application))
         if not self.is_auth:
@@ -287,13 +287,13 @@ class EGRNApplication(EGRNBase):
         if result_elements:
             application = services.update_application(application.id,
                                                       {'foreign_id': result_elements.text,
-                                                       'state': ApplicationStatus.added})
+                                                       'state': ApplicationState.added})
             logging.info('Got application id %s', application.foreign_id)
         else:
             message = self._wait_element('//div[@class="popupContent"]').text
             logging.info(message)
             application = services.update_application(application.id,
-                                                      {'state': ApplicationStatus.error,
+                                                      {'state': ApplicationState.error,
                                                        'message': str(message)})
         ## Продолжить работу
         self.driver.find_element_by_xpath('//span[text()="Продолжить работу"]').click()
@@ -311,7 +311,7 @@ class EGRNApplication(EGRNBase):
         self._set_application_id(application_id)
         application = services.get_application(application_id)
         application = services.update_application(application.id,
-                                                  {'state': ApplicationStatus.updating})
+                                                  {'state': ApplicationState.updating})
         if not self.is_auth:
             self.login()
             time.sleep(5)
@@ -380,12 +380,12 @@ class EGRNApplication(EGRNBase):
             with open(result_path, 'wb') as wb:
                 wb.write(html)
 
-            options['state'] = ApplicationStatus.completed
+            options['state'] = ApplicationState.completed
             options['result'] = '/api/application/{application_id}/result'.format(
                 application_id=application_id)
             logging.info('downloading complete')
         else:
-            options['state'] = ApplicationStatus.added
+            options['state'] = ApplicationState.added
 
         application = services.update_application(application.id, options)
 

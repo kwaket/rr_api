@@ -10,7 +10,7 @@ from types import FunctionType
 import ujson
 
 from spyders import EGRNApplication
-from schemas import Application, ApplicationStatus
+from schemas import Application, ApplicationState
 from settings import APPLICATION_DIR
 
 
@@ -82,7 +82,7 @@ def get_applications(skip: int, limit: int) -> list:
 
 def _mark_application_as_error(application_id):
     application = get_application(application_id)
-    application.state = ApplicationStatus.error
+    application.state = ApplicationState.error
     application = update_application(application.id, dict(application))
     return application
 
