@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse
 
 from schemas import Application, ApplicationStatus
 import services
-import tasks
 from settings import COOKIE_DOMAIN
 
 
@@ -101,7 +100,7 @@ async def update_application_data(application_id: int,
                                   api_key: APIKey = Depends(get_api_key)):
     application = services.update_application(application_id,
                                               {"status": ApplicationStatus.updating})
-    queue.enqueue(tasks.update_application_data, application)
+    queue.enqueue(services.update_application_data, application)
     return application
 
 
@@ -139,5 +138,5 @@ async def get_application_result(application_id: int,
 async def add_application(application: Application,
                           api_key: APIKey = Depends(get_api_key)):
     application = services.add_application(application.cadnum)
-    queue.enqueue(tasks.order_application, application)
+    queue.enqueue(services.order_application, application)
     return application

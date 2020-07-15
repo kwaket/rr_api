@@ -49,7 +49,8 @@ def test_get_application(application_data):
 def test_update_application(application_data):
     updated_application = application_data.copy()
     updated_application['state'] = 'updating'
-    updated = services.update_application(updated_application)
+    updated = services.update_application(updated_application['id'],
+                                          updated_application)
     assert updated.state == 'updating'
     assert updated.id == int(application_data['id'])
 
