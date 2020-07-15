@@ -11,8 +11,7 @@ from selenium.common.exceptions import (
     WebDriverException, TimeoutException, StaleElementReferenceException,
     NoSuchElementException)
 from selenium.webdriver.support.ui import WebDriverWait
-
-from recognizer import recognize
+from selenium.webdriver.support import expected_conditions
 
 import services
 from settings import (EGRN_KEY, SAVED_CAPTCHA, SAVED_RESPONSES,
@@ -81,6 +80,8 @@ class EGRNBase():
         # self.driver = webdriver.Chrome()
         self.driver.implicitly_wait(30)
         self.current_application_id = None
+        self.service_url = 'https://rosreestr.ru'
+        self.service_title = 'Запрос посредством доступа к ФГИС ЕГРН'
 
     def _set_application_id(self, application_id):
         self.current_application_id = application_id
@@ -90,6 +91,16 @@ class EGRNBase():
     def close(self):
         with suppress(WebDriverException):
             self.driver.close()
+
+    @logger
+    def _go_to_service(self):
+        self.driver.get(self.service_url)
+        try:
+            WebDriverWait(self.driver, timeout=60).until(
+                expected_conditions.title_contains(self.service_title))
+        except TimeoutException:
+            raise ExecutorError('Не удалось загрузить страницу сервиса ' + self.service_url)
+
 
     @logger
     def _go(self, url):
@@ -146,7 +157,7 @@ class EGRNBase():
     def _fill_field(field, value):
         for char in value:
             field.send_keys(char)
-            time.sleep(random.uniform(.1, .3))
+            time.sleep(random.uniform(.1, .5))
 
     def _save_exception_state(self, message=None):
         application_id = str(self.current_application_id) or 'out_of_task'
@@ -170,8 +181,7 @@ class EGRNApplication(EGRNBase):
         EGRNBase.__init__(self)
         self.egrn_key = egrn_key or EGRN_KEY
         self.is_auth = False
-        self.regions = json.load(open('regions.json'))
-        self.regions_map = json.load(open('regions_map.json'))
+        self.service_url = 'https://rosreestr.ru/wps/portal/p/cc_present/ir_egrn'
 
     @logger
     def login(self):
@@ -225,10 +235,10 @@ class EGRNApplication(EGRNBase):
                                                   dict(application))
         if not self.is_auth:
             self.login()
-            time.sleep(5)
+            time.sleep(1)
             logging.info('login succes')
         else:
-            self._go('https://rosreestr.ru/wps/portal/p/cc_present/ir_egrn')
+            self._go_to_service()
 
         self._wait_and_click('//span[text()="Поиск объектов недвижимости"]',
                              timeout=10)
@@ -237,7 +247,7 @@ class EGRNApplication(EGRNBase):
         fields = self.driver.find_elements_by_xpath('//*[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
         cadnum_field, region_field = fields[0], fields[2]
         cadnum_field.send_keys(application.cadnum)
-        region = self._get_region(application.cadnum)
+        region = get_region_rr(application.cadnum)
         region_field.send_keys(region)
         self._wait_element('//*[@id="VAADIN_COMBOBOX_OPTIONLIST"]')
         xpath = '//*[@id="VAADIN_COMBOBOX_OPTIONLIST"]//*[text()="{}"]'
@@ -277,13 +287,13 @@ class EGRNApplication(EGRNBase):
         if result_elements:
             application = services.update_application(application.id,
                                                       {'foreign_id': result_elements.text,
-                                                       'status': ApplicationStatus.added})
+                                                       'state': ApplicationStatus.added})
             logging.info('Got application id %s', application.foreign_id)
         else:
             message = self._wait_element('//div[@class="popupContent"]').text
             logging.info(message)
             application = services.update_application(application.id,
-                                                      {'status': ApplicationStatus.error,
+                                                      {'state': ApplicationStatus.error,
                                                        'message': str(message)})
         ## Продолжить работу
         self.driver.find_element_by_xpath('//span[text()="Продолжить работу"]').click()
@@ -301,12 +311,12 @@ class EGRNApplication(EGRNBase):
         self._set_application_id(application_id)
         application = services.get_application(application_id)
         application = services.update_application(application.id,
-                                                  {'status': ApplicationStatus.updating})
+                                                  {'state': ApplicationStatus.updating})
         if not self.is_auth:
             self.login()
             time.sleep(5)
         else:
-            self._go('https://rosreestr.ru/wps/portal/p/cc_present/ir_egrn')
+            self._go_to_service()
 
         self._wait_and_click('//span[text()="Мои заявки"]', timeout=10)
 
@@ -370,12 +380,12 @@ class EGRNApplication(EGRNBase):
             with open(result_path, 'wb') as wb:
                 wb.write(html)
 
-            options['status'] = ApplicationStatus.completed
+            options['state'] = ApplicationStatus.completed
             options['result'] = '/api/application/{application_id}/result'.format(
                 application_id=application_id)
             logging.info('downloading complete')
         else:
-            options['status'] = ApplicationStatus.added
+            options['state'] = ApplicationStatus.added
 
         application = services.update_application(application.id, options)
 
