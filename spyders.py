@@ -17,8 +17,10 @@ from recognizer import recognize
 import services
 from settings import (EGRN_KEY, SAVED_CAPTCHA, SAVED_RESPONSES,
                       APPLICATION_DIR, EXCEPTION_DIR)
-from utils import download_file, unzip_file, get_zip_content_list
-from xml_converter.main import get_html
+from utils.recognizer import recognize
+from utils.file_utils import unzip_file, get_zip_content_list
+from utils.xml_converter import get_html
+from utils.regions.regions import Region
 from schemas import ApplicationStatus
 
 
@@ -33,6 +35,11 @@ def clean_key(word):
     if word.endswith(':'):
         word = word[:-1]
     return word.strip()
+
+
+def get_region_rr(cadnum):
+    region = Region()
+    return region.get_region_rr(cadnum)
 
 
 def logger(func):
@@ -373,9 +380,3 @@ class EGRNApplication(EGRNBase):
         application = services.update_application(application.id, options)
 
         return application
-
-    def _get_region(self, cadnum):
-        region = self.regions[cadnum.split(':')[0]]
-        if region in self.regions_map.keys():
-            region = self.regions_map[region]
-        return region
