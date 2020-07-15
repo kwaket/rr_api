@@ -3,20 +3,27 @@
 import os
 import glob
 from datetime import datetime
+import logging
+import traceback
+from types import FunctionType
 
 import ujson
 
+from spyders import EGRNApplication
+from schemas import Application, ApplicationStatus
 from settings import APPLICATION_DIR
-from schemas import Application
 
 
 def _extract_filename_without_ext(filepath):
     filename = os.path.split(filepath)[-1]
     return os.path.splitext(filename)[0]
 
+
 def _gen_id():
     last = [int(_extract_filename_without_ext(f))
             for f in glob.glob(os.path.join(APPLICATION_DIR, '*.json'))]
+    if not last:
+        return 1
     return max(last) + 1
 
 
@@ -63,7 +70,7 @@ def update_application(application_id: int,
 
 
 def get_application_result(application: Application):
-    res = open(os.path.join(APPLICATION_DIR, str(application.id),
+    res = open(os.path.join(APPLICATION_DIR, str(application.foreign_id),
                             'result.html')).read()
     return res
 
@@ -71,3 +78,37 @@ def get_application_result(application: Application):
 def get_applications(skip: int, limit: int) -> list:
     applications = glob.glob(os.path.join(APPLICATION_DIR, '*.json'))
     return [Application(**ujson.load(open(f))) for f in applications]
+
+
+def _mark_application_as_error(application_id):
+    application = get_application(application_id)
+    application.state = ApplicationStatus.error
+    application = update_application(application.id, dict(application))
+    return application
+
+
+def _run_application_with_exception(function: FunctionType, application_id: int):
+    try:
+        function(application_id)
+    except Exception:
+        _mark_application_as_error(application_id)
+        logging.error('spyder exception %s', traceback.format_exc())
+    except BaseException:
+        _mark_application_as_error(application_id)
+        logging.error('stopped by worker %s', traceback.format_exc())
+
+
+def order_application(application: Application):
+    '''Order application on rosreestr.ru'''
+    logging.info('application added: %s' % str(application))
+    spyder = EGRNApplication()
+    _run_application_with_exception(spyder.order_application, application.id)
+    spyder.close()
+
+
+def update_application_data(application: Application):
+    '''Update application data (status, result) for rosreestr.ru'''
+    logging.info('updating application data: %s' % str(application))
+    spyder = EGRNApplication()
+    _run_application_with_exception(spyder.update_application_state, application.id)
+    spyder.close()
