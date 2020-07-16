@@ -19,6 +19,9 @@ rq = "*"
 requests = "*"
 lxml = "*"
 ujson = "*"
+psycopg2-binary = "*"
+sqlalchemy = "*"
+alembic = "*"
 
 [requires]
 python_version = "3.8"
