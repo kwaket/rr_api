@@ -1,0 +1,12 @@
+[Unit]
+Description=Rostreestr applications API
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory={{app_path}}
+ExecStart={{venv_path}}/bin/uvicorn api:app --proxy-headers --uds /tmp/uvicorn.sock
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,146 @@
+---
+- hosts: dev
+  user: "{{ ansible_ssh_user }}"
+  become: yes
+  vars_files:
+    - external_vars.yaml
+
+  tasks:
+  - name: Update apt cache
+    apt: update_cache=yes
+
+  - name: Install required packages
+    apt:
+      name:
+        - python3-pip
+        - python3-dev
+        - virtualenv
+        - curl
+        - redis
+        - nginx
+
+  # Cloning project
+  - name: Make dir for project
+    file:
+      path: "{{ app_path }}"
+      state: directory
+      owner: "{{ app_owner }}"
+      group: www-data
+      recurse: yes
+
+  - name: Make dir for ssh
+    file:
+      path: /var/www/.ssh
+      state: directory
+      owner: "{{ app_owner }}"
+      group: www-data
+      recurse: yes
+
+  - name: Set up environment variable spyders
+    lineinfile:
+      dest: /etc/environment
+      line: "EGRN_KEY={{EGRN_KEY}}"
+      state: present
+
+  - name: Set up environment variable API_KEY
+    lineinfile:
+      dest: /etc/environment
+      line: "API_KEY={{API_KEY}}"
+      state: present
+
+  ## Generate ssh key
+  - name: Generate /etc/ssh/ RSA host key
+    command : ssh-keygen -q -t rsa -f {{ ssh_key }} -C "" -N ""
+    args:
+      creates: "{{ ssh_key }}"
+
+  - name: Get ssh_key_pub content
+    shell: "cat {{ ssh_key }}.pub"
+    register: ssh_key_pub
+
+  - name: Add deploy key to repo
+    github_deploy_key:
+      owner: "kwaket"
+      repo: "rr_api"
+      name: "deploy-key"
+      key: "{{ ssh_key_pub.stdout }}"
+      force: no
+      token: "{{ git_token }}"
+
+  - name: Clone app from repository
+    git:
+      repo: "{{ git_repository }}"
+      dest: "{{ app_path }}"
+      accept_hostkey: yes
+      key_file: "{{ ssh_key }}"
+      version: "{{ git_version }}"
+
+  - name: Initiate virtualenv
+    pip:
+      virtualenv: "{{ venv_path }}"
+      virtualenv_python: python3.8
+      requirements: "{{ app_path }}/requirements.txt"
+
+  - name: Make temp dir app
+    file:
+      path: "{{app_path}}/temp"
+      state: directory
+      owner: "{{ app_owner }}"
+      group: www-data
+      recurse: yes
+
+  - name: Make tasks dir app
+    file:
+      path: "{{app_path}}/tasks"
+      state: directory
+      owner: "{{ app_owner }}"
+      group: www-data
+      recurse: yes
+
+  - name: Copy systemctl file
+    template:
+      src: confs/rr-api.service
+      dest: /etc/systemd/system/rr-api.service
+      owner: root
+      group: root
+      backup: yes
+
+  - name: Make systemd env dir
+    file:
+      path: "/etc/systemd/system/rr-api.service.d"
+      state: directory
+      owner: root
+      group: root
+      recurse: yes
+
+  - name: Copy environment for systemd services
+    template:
+      src: confs/systemd_env
+      dest: /etc/systemd/system/rr-api.service.d/rr-api.conf
+
+  - name: Copy systemctl worker file
+    template:
+      src: confs/rr-api-worker.service
+      dest: /etc/systemd/system/rr-api-worker.service
+      owner: root
+      group: root
+      backup: yes
+
+  - name: Make systemd env dir
+    file:
+      path: "/etc/systemd/system/rr-api-worker.service.d"
+      state: directory
+      owner: root
+      group: root
+      recurse: yes
+
+  - name: Copy environment for systemd services
+    template:
+      src: confs/systemd_env
+      dest: /etc/systemd/system/rr-api-worker.service.d/rr-api-worker.conf
+
+  - name: Restart rr-api, also issue daemon-reload to pick up config changes
+    systemd:
+      state: restarted
+      daemon_reload: yes
+      name: rr-api

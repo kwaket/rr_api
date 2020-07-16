@@ -1,0 +1,39 @@
+---
+- hosts: dev
+  user: "{{ ansible_ssh_user }}"
+  become: yes
+  vars_files:
+    - external_vars.yaml
+
+  tasks:
+  - name: Install required packages
+    apt:
+      name:
+        - nginx
+
+  - name: Copy nginx base config
+    copy:
+      src: confs/nginx.conf
+      dest: /etc/nginx/nginx.conf
+      backup: yes
+
+  - name:  "copy {{ app_name }} NGINX config"
+    template:
+      src: ./confs/nginx-app
+      dest: /etc/nginx/sites-available/{{app_name}}
+
+  - name: Create symlink
+    file:
+      src: /etc/nginx/sites-available/{{app_name}}
+      dest: /etc/nginx/sites-enabled/{{app_name}}
+      state: link
+
+  - name: Delete default config
+    file:
+      name: /etc/nginx/sites-enabled/default
+      state: absent
+
+  - name: Restart NGINX
+    service:
+      name: nginx
+      state: restarted

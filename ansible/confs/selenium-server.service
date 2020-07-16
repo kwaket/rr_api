@@ -1,0 +1,12 @@
+[Unit]
+Description=Selenium server
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory={{PATH}}
+ExecStart=java -jar selenium-server-standalone-{{VERSION}}.jar
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

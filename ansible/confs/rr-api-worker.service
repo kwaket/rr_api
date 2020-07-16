@@ -1,0 +1,12 @@
+[Unit]
+Description=Rostreestr applications API worker
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory={{app_path}}
+ExecStart={{venv_path}}/bin/rq worker high default low
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Rostreestr applications API
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory={{app_path}}
+ExecStart={{venv_path}}/bin/uvicorn api:app --proxy-headers --host 0.0.0.0 --port 80 --ssl-keyfile=/etc/letsencrypt/live/rr-api.space/privkey.pem --ssl-certfile=/etc/letsencrypt/live/rr-api.space/cert.pem
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

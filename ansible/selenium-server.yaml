@@ -1,0 +1,93 @@
+---
+- hosts: dev
+  user: savva
+  become: yes
+
+  vars:
+    VERSION: '3.141.59'
+    PATH: '/opt/selenium/'
+
+  tasks:
+  - name: Creates directory
+    file:
+      path: "{{PATH}}"
+      state: directory
+
+  - name: Download selenium-server-standalone
+    get_url:
+      url: "https://selenium-release.storage.googleapis.com/3.141/selenium-server-standalone-{{VERSION}}.jar"
+      dest: "{{PATH}}selenium-server-standalone-{{VERSION}}.jar"
+
+  - name: Update apt cache
+    apt:
+      update_cache: yes
+
+  - name: install java
+    apt:
+      name: openjdk-14-jdk
+      state: present
+
+  - name: Copy systemctl file
+    template:
+      src: confs/selenium-server.service
+      dest: /etc/systemd/system/selenium-server.service
+      owner: root
+      group: root
+      backup: yes
+
+  - name: Make systemd env dir
+    file:
+      path: "/etc/systemd/system/selenium-server.service.d"
+      state: directory
+      owner: root
+      group: root
+      recurse: yes
+
+  - name: Copy environment for systemd services
+    template:
+      src: confs/systemd_selenium_env
+      dest: /etc/systemd/system/selenium-server.service.d/selenium-server.conf
+
+  - name: Restart selenium-server, also issue daemon-reload to pick up config changes
+    systemd:
+      state: restarted
+      daemon_reload: yes
+      name: selenium-server
+
+  - name: Add an Apt signing key
+    apt_key:
+      url: https://dl.google.com/linux/linux_signing_key.pub
+      state: present
+
+  - name: Add Google Chrome repository
+    apt_repository:
+      repo: deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main
+      state: present
+
+
+
+
+  - name: Install required packages
+    apt:
+      name:
+        - google-chrome-stable
+        - unzip
+        - xvfb
+
+  - name: Make directory for webdrivers
+    file:
+      path: /opt/selenium
+      state: directory
+
+  - name: Download and unarchive chrome driver
+    unarchive:
+      src: https://chromedriver.storage.googleapis.com/83.0.4103.39/chromedriver_linux64.zip
+      dest: /opt/selenium/
+      remote_src: yes
+
+
+
+
+
+
+
