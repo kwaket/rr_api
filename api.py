@@ -1,20 +1,19 @@
 import os
 from typing import List
 
-from rq import Queue
+from sqlalchemy.orm import Session
 from redis import Redis
+from rq import Queue
 from fastapi import Security, Depends, FastAPI, HTTPException
 from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader, APIKey
 from starlette.status import HTTP_403_FORBIDDEN
 from starlette.responses import RedirectResponse, JSONResponse
 from fastapi.responses import HTMLResponse
-from sqlalchemy.orm import Session
 
 import services
 from settings import COOKIE_DOMAIN
-import models
 import schemas
-from db import SessionLocal, engine
+from db import SessionLocal
 
 
 app = FastAPI()
@@ -69,6 +68,7 @@ app = FastAPI(title='Rostreestr applications API',
 @app.get('/api')
 async def get_main_page(api_key: APIKey = Depends(get_api_key)):
     return {'name': 'API для заказа выписок'}
+
 
 @app.get(
     "/api/applications/",
