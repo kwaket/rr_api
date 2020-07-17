@@ -1,5 +1,6 @@
 import os
 from contextlib import suppress
+from typing import Optional
 
 
 DATA_DIR = os.path.join(os.getcwd(), 'data')
@@ -9,7 +10,7 @@ SAVED_CAPTCHA = os.path.join(os.getcwd(), 'temp', 'captcha')
 SAVED_RESPONSES = os.path.join(os.getcwd(), 'temp', 'responses')
 EGRN_KEY = os.getenv('EGRN_KEY')
 COOKIE_DOMAIN = 'rr-api.space'
-SQLALCHEMY_DATABASE_URL = os.getenv('SQLALCHEMY_DATABASE_URL')
+SQLALCHEMY_DATABASE_URL: Optional[str] = os.getenv('SQLALCHEMY_DATABASE_URL')
 
 
 for path in [SAVED_CAPTCHA, DATA_DIR, SAVED_RESPONSES,
