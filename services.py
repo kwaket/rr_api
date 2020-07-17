@@ -7,11 +7,18 @@ import logging
 import traceback
 from types import FunctionType
 
+from sqlalchemy.orm import Session
 import ujson
 
 from spyders import EGRNApplication
-from schemas import Application, ApplicationState
+import schemas
+import models
 from settings import APPLICATION_DIR
+from db import SessionLocal
+
+
+class ServiceException(Exception):
+    pass
 
 
 def _extract_filename_without_ext(filepath):
@@ -19,86 +26,106 @@ def _extract_filename_without_ext(filepath):
     return os.path.splitext(filename)[0]
 
 
-def _gen_id():
-    last = [int(_extract_filename_without_ext(f))
-            for f in glob.glob(os.path.join(APPLICATION_DIR, '*.json'))]
-    if not last:
-        return 1
-    return max(last) + 1
+def insert_application_states(db: Session):
+    for state in schemas.ApplicationState:
+        if not _get_application_state(db, state.name):
+            db.add(models.ApplicationState(name=state.name))
+            db.commit()
 
 
-def _gen_filename(application_dir: str, application_id: int):
-    return os.path.join(application_dir, str(application_id) + '.json')
+def _get_application_state(db: Session, name: str) -> models.Application:
+    return db.query(models.ApplicationState).filter(
+        models.ApplicationState.name == name).first()
 
 
-def _save_application(application: Application) -> Application:
-    filepath = _gen_filename(APPLICATION_DIR, application.id)
-    application_dict: dict = dict(application)
-    for k, v in application_dict.items():
-        if isinstance(v, datetime):
-            application_dict[k] = v.isoformat()
-    with open(filepath, 'w') as writer:
-        ujson.dump(application_dict, writer)
-    return Application(**application_dict)
+def _get_application_model(db: Session,
+                           application_id: int) -> models.Application:
+    return db.query(models.Application).filter(
+        models.Application.id == application_id).first()
 
 
-def add_application(cadnum: str) -> Application:
-    created = datetime.utcnow().isoformat()
-    application = {
-        'id': _gen_id(),
-        'cadnum': cadnum,
-        'inserted': created,
-        'updated': created,
-        'status': None
-    }
-    return _save_application(Application(**application))
+def _save_application_model(db: Session,
+                            model: models.Application) -> models.Application:
+    db.add(model)
+    db.commit()
+    db.refresh(model)
+    return model
 
 
-def get_application(application_id: int) -> Application:
-    filename = _gen_filename(APPLICATION_DIR, application_id)
-    return Application(**ujson.load(open(filename)))
+def _update_application_model(db: Session, model: models.Application,
+                              updated_fields: dict) -> models.Application:
+    model.foreign_id = updated_fields.get('foreign_id', model.foreign_id)
+    model.foreign_status = updated_fields.get('foreign_status',
+                                              model.foreign_status)
+    model.foreign_created = updated_fields.get('foreign_created',
+                                               model.foreign_created)
+    model.result = updated_fields.get('result', model.result)
+    model.updated = datetime.utcnow()
+    if updated_fields.get('state'):
+        model.state = _get_application_state(db, updated_fields['state'])
+    return _save_application_model(db, model)
 
 
-def update_application(application_id: int,
-                       updated_fields: dict) -> Application:
-    application = get_application(application_id)
-    application_data = dict(application)
-    application_data.update(updated_fields)
-    if not application.updated:
-        application_data['updated'] = datetime.utcnow().isoformat()
-    return _save_application(Application(**application_data))
+def add_application(db: Session, cadnum: str) -> schemas.Application:
+    model = models.Application(cadnum=cadnum)
+    model = _save_application_model(db, model)
+    return model.to_schema()
 
 
-def get_application_result(application: Application):
-    res = open(os.path.join(APPLICATION_DIR, str(application.foreign_id),
+def get_application(db: Session, application_id: int) -> schemas.Application:
+    application = db.query(models.Application).filter(
+        models.Application.id == application_id).first()
+    if not application:
+        raise ServiceException('Application does not exist')
+    return application.to_schema()
+
+
+def update_application(db: Session, application_id: int,
+                       updated_fields: dict) -> schemas.Application:
+    model = _get_application_model(db, application_id)
+    if not model:
+        raise ServiceException('Application does not exist')
+    model = _update_application_model(db, model, updated_fields)
+    return model.to_schema()
+
+
+def get_application_result(db: Session, application_id: int):
+    application = get_application(db, application_id)
+    if application.foreign_status != 'Завершена':
+        raise ServiceException('Result does not ready')
+    res = open(os.path.join(APPLICATION_DIR, application.foreign_id,
                             'result.html')).read()
     return res
 
 
-def get_applications(skip: int, limit: int) -> list:
-    applications = glob.glob(os.path.join(APPLICATION_DIR, '*.json'))
-    return [Application(**ujson.load(open(f))) for f in applications]
+def get_applications(db: Session, skip: int = 0, limit: int = 10) -> list:
+    applications = db.query(models.Application).order_by(
+        models.Application.id.desc()).offset(skip).limit(limit).all()
+    return [a.to_schema() for a in applications]
 
 
-def _mark_application_as_error(application_id):
-    application = get_application(application_id)
-    application.state = ApplicationState.error
-    application = update_application(application.id, dict(application))
+def _mark_application_as_error(db: Session, application_id: int):
+    application = get_application(db, application_id)
+    application.state = schemas.ApplicationState.error
+    application = update_application(db, application.id, dict(application))
     return application
 
 
-def _run_application_with_exception(function: FunctionType, application_id: int):
+def _run_application_with_exception(function: FunctionType,
+                                    application_id: int):
     try:
         function(application_id)
     except Exception:
-        _mark_application_as_error(application_id)
+        db = SessionLocal()
+        _mark_application_as_error(db, application_id)
         logging.error('spyder exception %s', traceback.format_exc())
     except BaseException:
-        _mark_application_as_error(application_id)
+        db = SessionLocal()
+        _mark_application_as_error(db, application_id)
         logging.error('stopped by worker %s', traceback.format_exc())
 
 
-def order_application(application: Application):
+def order_application(application: schemas.Application):
     '''Order application on rosreestr.ru'''
     logging.info('application added: %s' % str(application))
     spyder = EGRNApplication()
@@ -106,7 +133,7 @@ def order_application(application: Application):
     spyder.close()
 
 
-def update_application_data(application: Application):
+def update_application_data(application: schemas.Application):
     '''Update application data (status, result) for rosreestr.ru'''
     logging.info('updating application data: %s' % str(application))
     spyder = EGRNApplication()
