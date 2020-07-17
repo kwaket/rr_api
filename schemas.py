@@ -39,7 +39,7 @@ class Application(BaseModel):
     cadnum: str
     foreign_id: Optional[str] = None
     foreign_status: Optional[str] = None
-    foreign_created: Optional[str] = None
+    foreign_created: Optional[datetime] = None
     result: Optional[str] = None
     inserted: Optional[datetime] = None
     updated: Optional[datetime] = None
