@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
 from db import Base
+import schemas
 
 
 class Application(Base):
@@ -10,7 +11,7 @@ class Application(Base):
 
     id = Column(Integer, primary_key=True)
     cadnum = Column(String(100))  # add validator
-    foreign_id = Column(Integer, unique=True)
+    foreign_id = Column(String(20), unique=True)
     foreign_status = Column(String(100))
     foreign_created = Column(DateTime())
     result = Column(String)
@@ -20,8 +21,8 @@ class Application(Base):
     state_id = Column(Integer, ForeignKey('applications_states.id'))
     state = relationship('ApplicationState', back_populates="application")
 
-    def to_schema(self):
-        return {
+    def to_schema(self) -> schemas.Application:
+        return schemas.Application(**{
             "id": self.id,
             "cadnum": self.cadnum,
             "foreign_id": self.foreign_id,
@@ -30,8 +31,8 @@ class Application(Base):
             "result": self.result,
             "inserted": self.inserted,
             "updated": self.updated,
-            "state": self.state
-        }
+            "state": self.state.name if self.state else None
+        })
 
 
 class ApplicationState(Base):
