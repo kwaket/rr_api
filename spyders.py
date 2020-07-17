@@ -21,6 +21,7 @@ from utils.file_utils import unzip_file, get_zip_content_list
 from utils.xml_converter import get_html
 from utils.regions.regions import Region
 from schemas import ApplicationState
+from db import SessionLocal
 
 
 logging.basicConfig(level=logging.INFO,
@@ -77,11 +78,11 @@ class EGRNBase():
             self.driver = webdriver.Remote(
                 command_executor='http://localhost:4444/wd/hub',
                 desired_capabilities=options.to_capabilities())
-        # self.driver = webdriver.Chrome()
         self.driver.implicitly_wait(30)
         self.current_application_id = None
         self.service_url = 'https://rosreestr.ru'
         self.service_title = 'Запрос посредством доступа к ФГИС ЕГРН'
+        self.db = SessionLocal()
 
     def _set_application_id(self, application_id):
         self.current_application_id = application_id
@@ -91,6 +92,7 @@ class EGRNBase():
     def close(self):
         with suppress(WebDriverException):
             self.driver.close()
+        self.db.close()
 
     @logger
     def _go_to_service(self):
@@ -227,11 +229,31 @@ class EGRNApplication(EGRNBase):
         return next_page_element
 
     @logger
+    def fill_captcha(self):
+        captcha_pic = self._wait_element('//img[contains(@src, "captcha")]')
+        # import ipdb; ipdb.set_trace()
+        code = self._recognize_captcha(captcha_pic)
+        while not code:
+            time.sleep(3)
+            self._wait_and_click('//span[@class="v-button-caption" and text()="Другую картинку"]')
+            captcha_pic = self._wait_element('//img[contains(@src, "captcha")]')
+            code = self._recognize_captcha(captcha_pic)
+
+        captcha_field = self.driver.find_element_by_xpath(
+            '//div[@name="ibmMainContainer"]//input[@type="text"]')
+        time.sleep(1)
+        while captcha_field.get_property('value') != code:
+            captcha_field.clear()
+            captcha_field.send_keys(code)
+            time.sleep(3)
+            logging.info('%s Trying to fill captcha again', self.current_application_id)
+
+    @logger
     def order_application(self, application_id):
         self._set_application_id(application_id)
-        application = services.get_application(application_id)
+        application = services.get_application(self.db, application_id)
         application.state = ApplicationState.adding
-        application = services.update_application(application.id,
+        application = services.update_application(self.db, application.id,
                                                   dict(application))
         if not self.is_auth:
             self.login()
@@ -257,16 +279,7 @@ class EGRNApplication(EGRNBase):
 
         self._wait_and_click('//td[contains(@class, "v-table-cell-content-cadastral_num")]')
 
-        captcha_pic = self._wait_element('//img[contains(@src, "captcha")]')
-
-        code = self._recognize_captcha(captcha_pic)
-        captcha_field = self.driver.find_element_by_xpath(
-            '//div[@name="ibmMainContainer"]//input[@type="text"]')
-        time.sleep(1)
-        while captcha_field.get_property('value') != code:
-            captcha_field.clear()
-            captcha_field.send_keys(code)
-            time.sleep(3)
+        self.fill_captcha()
 
         # Иногда всплывает окно "ожидание ответа".
         # Необходимо дождаться пока окно пропадет иначе программа падает
@@ -285,14 +298,14 @@ class EGRNApplication(EGRNBase):
         result_elements = self._wait_element('//div[@class="popupContent"]//b')
         logging.info('result %s', result_elements)
         if result_elements:
-            application = services.update_application(application.id,
+            application = services.update_application(self.db, application.id,
                                                       {'foreign_id': result_elements.text,
                                                        'state': ApplicationState.added})
             logging.info('Got application id %s', application.foreign_id)
         else:
             message = self._wait_element('//div[@class="popupContent"]').text
             logging.info(message)
-            application = services.update_application(application.id,
+            application = services.update_application(self.db, application.id,
                                                       {'state': ApplicationState.error,
                                                        'message': str(message)})
         ## Продолжить работу
@@ -309,8 +322,8 @@ class EGRNApplication(EGRNBase):
     @logger
     def update_application_state(self, application_id: int):
         self._set_application_id(application_id)
-        application = services.get_application(application_id)
-        application = services.update_application(application.id,
+        application = services.get_application(self.db, application_id)
+        application = services.update_application(self.db, application.id,
                                                   {'state': ApplicationState.updating})
         if not self.is_auth:
             self.login()
@@ -387,6 +400,6 @@ class EGRNApplication(EGRNBase):
         else:
             options['state'] = ApplicationState.added
 
-        application = services.update_application(application.id, options)
+        application = services.update_application(self.db, application.id, options)
 
         return application
