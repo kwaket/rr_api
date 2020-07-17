@@ -67,7 +67,7 @@ def _update_application_model(db: Session, model: models.Application,
 
 
 def add_application(db: Session, cadnum: str) -> schemas.Application:
-    model = models.Application(cadnum=cadnum)
+    model = models.Application(cadnum=cadnum, inserted=datetime.utcnow())
     model = _save_application_model(db, model)
     return model.to_schema()
 
