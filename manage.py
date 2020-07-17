@@ -1,3 +1,4 @@
+#!/var/www/html/rr_applications_api/env/bin/python
 import click
 
 
