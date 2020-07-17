@@ -3,6 +3,8 @@
 import re
 from datetime import datetime
 from enum import Enum
+from typing import Optional
+
 from pydantic import BaseModel, validator
 
 
@@ -33,15 +35,15 @@ class Application(BaseModel):
       * foreign_created - время создания выписки
       * resutl - ссылка на html результат или пустое значение если результат не готов
     """
-    id: int = None
+    id: int
     cadnum: str
-    foreign_id: str = None
-    foreign_status: str = None
-    foreign_created: str = None
-    result: str = None
-    inserted: datetime = None
-    updated: datetime = None
-    state: ApplicationState = None
+    foreign_id: Optional[str] = None
+    foreign_status: Optional[str] = None
+    foreign_created: Optional[str] = None
+    result: Optional[str] = None
+    inserted: Optional[datetime] = None
+    updated: Optional[datetime] = None
+    state: Optional[ApplicationState] = None
 
     @validator('cadnum')
     def cadnum_must_match_pattern(cls, value):
