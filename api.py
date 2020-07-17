@@ -1,19 +1,25 @@
 import os
+from typing import List
 
+from rq import Queue
 from redis import Redis
 from fastapi import Security, Depends, FastAPI, HTTPException
 from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader, APIKey
 from starlette.status import HTTP_403_FORBIDDEN
 from starlette.responses import RedirectResponse, JSONResponse
-from rq import Queue
 from fastapi.responses import HTMLResponse
+from sqlalchemy.orm import Session
 
-from schemas import Application, ApplicationState
 import services
 from settings import COOKIE_DOMAIN
+import models
+import schemas
+from db import SessionLocal, engine
 
 
-queue = Queue(connection=Redis())
+app = FastAPI()
+queue = Queue(connection=Redis(), default_timeout=3600)
+queue_low = Queue('low', connection=Redis(), default_timeout=3600)
 
 
 API_KEY = os.getenv('API_KEY')
@@ -38,6 +44,13 @@ async def get_api_key(api_key_query: str = Security(api_key_query),
         status_code=HTTP_403_FORBIDDEN, detail="Could not validate credentials"
     )
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 tags_metadata = [
     {
@@ -61,15 +74,13 @@ async def get_main_page(api_key: APIKey = Depends(get_api_key)):
     "/api/applications/",
     response_description="applications",
     description="Получить список заявлений",
-    response_model=list,
+    response_model=List[schemas.Application],
     tags=["applications"]
 )
 async def get_applications(skip: int = 0, limit: int = 10,
+                           db: Session = Depends(get_db),
                            api_key: APIKey = Depends(get_api_key)):
-    try:
-        applications = services.get_applications(skip, limit)
-    except IndexError:
-        raise HTTPException(404, "No such applications")
+    applications = services.get_applications(db, skip, limit)
     return applications
 
 
@@ -77,29 +88,32 @@ async def get_applications(skip: int = 0, limit: int = 10,
     "/api/applications/{application_id}",
     response_description="Application",
     description="Получить заявление по id",
-    response_model=Application,
+    response_model=schemas.Application,
     tags=["applications"]
 )
 async def get_application(application_id: int,
+                          db: Session = Depends(get_db),
                           api_key: APIKey = Depends(get_api_key)):
     try:
-        application = services.get_application(application_id)
-    except FileNotFoundError:
-        raise HTTPException(404, "No such application")
+        application = services.get_application(db, application_id)
+    except services.ServiceException as exc:
+        raise HTTPException(404, str(exc))
     return application
+
 
 @app.get(
     "/api/applications/{application_id}/update",
     response_description="Application",
     description="""Обновить данные заявления по id.
         Время обновления данных около 2 минут""",
-    response_model=Application,
+    response_model=schemas.Application,
     tags=["applications"]
 )
 async def update_application_data(application_id: int,
+                                  db: Session = Depends(get_db),
                                   api_key: APIKey = Depends(get_api_key)):
-    application = services.update_application(application_id,
-                                              {"status": ApplicationState.updating})
+    application = services.update_application(db, application_id,
+                                              {"status": schemas.ApplicationState.updating})
     queue.enqueue(services.update_application_data, application)
     return application
 
@@ -113,15 +127,12 @@ async def update_application_data(application_id: int,
     tags=["applications"]
 )
 async def get_application_result(application_id: int,
+                                 db: Session = Depends(get_db),
                                  api_key: APIKey = Depends(get_api_key)):
     try:
-        application = services.get_application(application_id)
-    except FileNotFoundError:
-        raise HTTPException(404, "No such task")
-    try:
-        application_result = services.get_application_result(application)
-    except FileNotFoundError:
-        raise HTTPException(404, "Result is not ready")
+        application_result = services.get_application_result(db, application_id)
+    except services.ServiceException as exc:
+        raise HTTPException(404, str(exc))
     return application_result
 
 
@@ -132,11 +143,25 @@ async def get_application_result(application_id: int,
         В результе запроса заявлению будет присвоен id (внутренний)
         для дальнейшего отслеживания статуса заявления.
         Время получения номера заявления около 2 минут""",
-    response_model=Application,
+    response_model=schemas.Application,
     tags=["applications"]
 )
-async def add_application(application: Application,
+async def add_application(application: schemas.Application,
+                          db: Session = Depends(get_db),
                           api_key: APIKey = Depends(get_api_key)):
-    application = services.add_application(application.cadnum)
+    try:
+        application = services.add_application(db, application.cadnum)
+    except services.ServiceException as exc:
+        raise HTTPException(500, "Server error. Failed to order application")
     queue.enqueue(services.order_application, application)
+    queue_low.enqueue(services.update_application_data, application)
     return application
+
+
+# @app.post("/users/", response_model=schemas.User)
+# def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+#     db_user = crud.get_user_by_email(db, email=user.email)
+#     if db_user:
+#         raise HTTPException(status_code=400, detail="Email already registered")
+#     return crud.create_user(db=db, user=user)
+
