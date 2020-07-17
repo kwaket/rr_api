@@ -28,12 +28,12 @@ class Application(BaseModel):
       * updated - время последнего обновления (актуализиции) заявления
       * state - состояние
 
-    Поля foreign_id, foreign_status, foreign_created, resutl представляют
+    Поля foreign_id, foreign_status, foreign_created, result представляют
     поля выписки с сайта Росреестра:
       * foreign_id - номер выписки
       * foreign_status - статус выписки
       * foreign_created - время создания выписки
-      * resutl - ссылка на html результат или пустое значение если результат не готов
+      * result - ссылка на html результат или пустое значение если результат не готов
     """
     id: int
     cadnum: str
