@@ -1,0 +1,41 @@
+---
+- hosts: dev
+  user: "{{ ansible_ssh_user }}"
+  become: yes
+  vars_files:
+    - external_vars.yaml
+
+  tasks:
+  - name: Update apt cache
+    apt: update_cache=yes
+
+  - name: Install required packages
+    apt:
+      name:
+        - python3-pip
+        - python3-dev
+        - postgresql
+        - postgresql-contrib
+
+  - name: Install required python packages (global)
+    pip:
+      name:
+        - psycopg2-binary
+
+  - name: Create a new database with name {{ app_name }}
+    become: true
+    become_user: postgres
+    postgresql_db:
+      name: "{{ app_name }}"
+    environment:
+        LC_ALL: en_US.utf-8
+
+  - name: Connect to {{ app_name }} database, create {{ app_name }} user, and grant access to database
+    become: true
+    become_user: postgres
+    postgresql_user:
+      db: "{{ app_name }}"
+      name: "{{ app_name }}"
+      password: "{{ db_password }}"
+      priv: ALL
+      role_attr_flags: NOSUPERUSER

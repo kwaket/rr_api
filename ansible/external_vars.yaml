@@ -1,11 +1,13 @@
 app_name: rr_applications_api
 app_path: "/var/www/html/{{ app_name }}"
 app_owner: "www-data"
+db_name: "{{ app_name }}"
+db_password: "{{ lookup('env', 'DB_PASSWORD_PROD') }}"
 venv_path: "{{ app_path }}/env"
 git_repository: git@github.com:kwaket/rr_api.git
-git_token: be40ef601cd01d78f76c40beec3eca455e8ad52a
+git_token: "{{ lookup('env', 'GIT_TOKEN') }}"
 git_version: "{{ branch }}"
 ssh_key: /var/www/.ssh/deploy_key
-EGRN_KEY: "{{ lookup('env','EGRN_KEY') }}"
+EGRN_KEY: "{{ lookup('env','EGRN_KEY_COURIER') }}"
 API_KEY: "{{ lookup('env','API_KEY_PROD') }}"
 

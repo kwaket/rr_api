@@ -2,5 +2,7 @@
 - hosts: dev
   user: "{{ ansible_ssh_user }}"
 
+- import_playbook: db.yaml
 - import_playbook: app.yaml
 - import_playbook: nginx.yaml
+- import_playbook: selenium-server.yaml
