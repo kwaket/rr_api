@@ -139,6 +139,28 @@
       src: confs/systemd_env
       dest: /etc/systemd/system/rr-api-worker.service.d/rr-api-worker.conf
 
+  # Database
+  - name: Set db env variable
+    lineinfile:
+      dest: "/etc/environment"
+      state: present
+      regexp: "^SQLALCHEMY_DATABASE_URL="
+      line: "SQLALCHEMY_DATABASE_URL=postgresql://{{app_name}}:{{db_password}}@localhost/{{app_name}}"
+
+  - name: Upgrade to latest migration
+    command: "{{ venv_path }}/bin/alembic upgrade head"
+    args:
+      chdir: "{{app_path}}"
+    environment:
+      SQLALCHEMY_DATABASE_URL: "postgresql://{{app_name}}:{{db_password}}@localhost/{{app_name}}"
+
+  - name: Fill required tables
+    command: "./manage.py --deploy"
+    args:
+      chdir: "{{app_path}}"
+    environment:
+      SQLALCHEMY_DATABASE_URL: "postgresql://{{app_name}}:{{db_password}}@localhost/{{app_name}}"
+
   - name: Restart rr-api, also issue daemon-reload to pick up config changes
     systemd:
       state: restarted
