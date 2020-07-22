@@ -10,10 +10,10 @@ from starlette.status import HTTP_403_FORBIDDEN
 from starlette.responses import RedirectResponse, JSONResponse
 from fastapi.responses import HTMLResponse
 
-import services
+import app.services as services
 from settings import COOKIE_DOMAIN
-import schemas
-from db import SessionLocal
+import app.schemas as schemas
+from app.db import SessionLocal
 
 
 app = FastAPI()

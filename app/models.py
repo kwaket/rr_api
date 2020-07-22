@@ -2,8 +2,8 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
-from db import Base
-import schemas
+from app.db import Base
+import app.schemas as schemas
 
 
 class Application(Base):

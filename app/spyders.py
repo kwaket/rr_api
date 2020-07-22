@@ -13,15 +13,16 @@ from selenium.common.exceptions import (
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 
-import services
+import app.services as services
+
 from settings import (EGRN_KEY, SAVED_CAPTCHA, SAVED_RESPONSES,
                       APPLICATION_DIR, EXCEPTION_DIR)
-from utils.recognizer import recognize
-from utils.file_utils import unzip_file, get_zip_content_list
-from utils.xml_converter import get_html
-from utils.regions.regions import Region
-from schemas import ApplicationState
-from db import SessionLocal
+from app.utils.recognizer import recognize
+from app.utils.file_utils import unzip_file, get_zip_content_list
+from app.utils.xml_converter import get_html
+from app.utils.regions.regions import Region
+from app.schemas import ApplicationState
+from app.db import SessionLocal
 
 
 logging.basicConfig(level=logging.INFO,

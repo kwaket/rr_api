@@ -2,10 +2,10 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import services
-from schemas import Application
-import models
-from db import Base
+import app.services as services
+from app.schemas import Application
+import app.models as models
+from app.db import Base
 
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
