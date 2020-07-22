@@ -4,6 +4,15 @@ import ujson
 
 
 class Region():
+    """Класс определяющий регион по кадастровому номеру.
+
+    Данные для определения региона по кадастровому номеру взяты здесь:
+    https://rosreestr.ru/wps/portal/cc_ib_OpenData?param_infoblock_document_path=openData_region.htm
+
+    Основной словарь (regions.json) содержит все регионы
+    Дополнительный словарь (regions_map.json) содержит полные названия регионов
+    и их сокращенные версии соответствующие названиям на сайте Росреестра.
+    """
 
     def __init__(self):
         self.regions = ujson.load(
