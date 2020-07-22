@@ -155,7 +155,7 @@
       SQLALCHEMY_DATABASE_URL: "postgresql://{{app_name}}:{{db_password}}@localhost/{{app_name}}"
 
   - name: Fill required tables
-    command: "./manage.py --deploy"
+    command: "./manage.py deploy"
     args:
       chdir: "{{app_path}}"
     environment:
