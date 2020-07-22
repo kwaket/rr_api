@@ -1,23 +1,38 @@
 import os
 
 from fastapi.testclient import TestClient
-import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from api import app
+from db import Base
+from api import app, get_db
+
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+Base.metadata.create_all(bind=engine)
+
+
+def override_get_db():
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
 
-TASK_ID = '666'
-
-
-@pytest.fixture
-def application_data():
-    data = {
-        'id': TASK_ID,
-        'cadnum': '50:26:0100213:15'
-    }
-    return data
+TASK_ID = None
 
 
 def test_auth():
@@ -43,7 +58,7 @@ def test_add_application():
     result = response.json()
     assert result["cadnum"] == "50:26:0100213:15"
     assert result["id"]
-    assert result["updated"]
+    assert result["inserted"]
     TASK_ID = result["id"]
 
 
@@ -54,30 +69,17 @@ def test_get_application():
     )
     assert response.status_code == 200
     result = response.json()
+    print(result)
     assert result["cadnum"] == "50:26:0100213:15"
     assert result["id"] == TASK_ID
     assert result["inserted"]
-    assert result["updated"]
 
 
-# def test_update_application():
-#     data = {
-#         "cadnum": "50:26:0100213:15",
-#         "id": TASK_ID,
-
-#         "foreign_id": "20-231432",
-#         "foreign_status": "В работе",
-#         "result": None
-#     }
-#     response = client.put(
-#         "/api/applications/" + str(TASK_ID),
-#         headers={"access_token": os.getenv('API_KEY')},
-#         json=data
-#     )
-#     assert response.status_code == 200
-#     result = response.json()
-#     assert result["cadnum"] == "50:26:0100213:15"
-#     assert result["id"] == TASK_ID
-#     assert result["foreign_id"] == data["foreign_id"]
-#     assert result["foreign_status"] == data["foreign_status"]
-#     assert result["result"] is None
+def test_get_applications():
+    response = client.get(
+        "/api/applications/",
+        headers={"access_token": os.getenv('API_KEY')}
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert isinstance(result, list)

@@ -1,61 +1,69 @@
 import pytest
-import json
-import os
-from contextlib import suppress
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 import services
 from schemas import Application
-from settings import APPLICATION_DIR
+import models
+from db import Base
 
-TASK_ID = '666'
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+Base.metadata.create_all(bind=engine)
 
 @pytest.fixture
-def application_data():
+def db():
+    try:
+        db = TestingSessionLocal()
+        application = models.Application(cadnum='33:44:555555:33')
+        db.add(application)
+        db.commit()
+
+        services.insert_application_states(db)
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture
+def application_data(db):
+    application = db.query(models.Application).first()
     data = {
-        'id': TASK_ID,
-        'cadnum': '33:44:555555:33'
+        'id': application.id,
+        'cadnum': application.cadnum
     }
     return data
 
 
-def setup():
-    print ("basic setup into module")
-    application_data = {
-        'id': TASK_ID,
-        'cadnum': '33:44:555555:33'
-    }
-    with open(os.path.join(APPLICATION_DIR, application_data['id'] + '.json'),
-              'w') as writer:
-        json.dump(application_data, writer)
-
-def teardown():
-    print ("basic teardown into module")
-    with suppress(FileNotFoundError):
-        os.remove(os.path.join(APPLICATION_DIR, TASK_ID + '.json'))
-
-
-def test_add_application():
+def test_add_application(db):
     cadnum = '33:44:555555:33'
-    result = services.add_application(cadnum)
+    result = services.add_application(db, cadnum)
     assert isinstance(result.id, int)
     assert cadnum == result.cadnum
 
 
-def test_get_application(application_data):
-    result = services.get_application(application_data['id'])
+def test_get_application(db, application_data):
+    result = services.get_application(db, application_data['id'])
     assert result.cadnum == application_data['cadnum']
 
 
-def test_update_application(application_data):
+def test_update_application(db, application_data):
     updated_application = application_data.copy()
     updated_application['state'] = 'updating'
-    updated = services.update_application(updated_application['id'],
+    updated = services.update_application(db, updated_application['id'],
                                           updated_application)
     assert updated.state == 'updating'
-    assert updated.id == int(application_data['id'])
+    assert updated.id == application_data['id']
 
 
-def test_get_applications():
-    applications = services.get_applications(0, 10)
+def test_get_applications(db):
+    applications = services.get_applications(db, 0, 10)
     assert isinstance(applications, list)
     assert isinstance(applications[0], Application)
