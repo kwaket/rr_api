@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=www-data
 WorkingDirectory={{app_path}}
-ExecStart={{venv_path}}/bin/uvicorn api:app --proxy-headers --uds /tmp/uvicorn.sock
+ExecStart={{venv_path}}/bin/uvicorn app.api:app --proxy-headers --uds /tmp/uvicorn.sock
 Restart=always
 
 [Install]
