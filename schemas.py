@@ -35,7 +35,7 @@ class Application(BaseModel):
       * foreign_created - время создания выписки
       * result - ссылка на html результат или пустое значение если результат не готов
     """
-    id: int
+    id: Optional[int]
     cadnum: str
     foreign_id: Optional[str] = None
     foreign_status: Optional[str] = None
@@ -45,6 +45,7 @@ class Application(BaseModel):
     updated: Optional[datetime] = None
     state: Optional[ApplicationState] = None
 
+    @classmethod
     @validator('cadnum')
     def cadnum_must_match_pattern(cls, value):
         res = re.match(r'^[\d]{2}\:[\d]{2}\:[\d]{6,7}\:[\d]{1,}$', value)
