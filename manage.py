@@ -21,7 +21,7 @@ def tasker():
 @click.command()
 def deploy():
     from app.db import SessionLocal
-    from services import insert_application_states
+    from app.services import insert_application_states
 
     db = SessionLocal()
     insert_application_states(db)
