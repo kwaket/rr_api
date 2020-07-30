@@ -20,7 +20,7 @@ def tasker():
 
 @click.command()
 def deploy():
-    from db import SessionLocal
+    from app.db import SessionLocal
     from services import insert_application_states
 
     db = SessionLocal()
