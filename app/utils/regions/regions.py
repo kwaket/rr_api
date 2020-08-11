@@ -16,9 +16,9 @@ class Region():
 
     def __init__(self):
         self.regions = ujson.load(
-            open(os.path.join('utils', 'regions', 'regions.json')))
+            open(os.path.join('app', 'utils', 'regions', 'regions.json')))
         self.regions_map = ujson.load(
-            open(os.path.join('utils', 'regions', 'regions_map.json')))
+            open(os.path.join('app', 'utils', 'regions', 'regions_map.json')))
 
     def get_region(self, cadnum: str) -> str:
         '''Возвращает название региона по кадастровому номеру.'''
