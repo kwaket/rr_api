@@ -52,3 +52,18 @@ class Application(BaseModel):
         if res:
             return value
         raise ValueError('Cadnum must match pattern АА:ВВ:CCCCСCC:КК')
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "id",
+                "cadnum": "50:26:0100213:15",
+                "foreign_id": "50-XXXXXX",
+                "foreign_status": "В работе",
+                "foreign_created": "11.08.2020",
+                "result": "/applications/id/result",
+                "inserted": "2020-08-11T05:15:00.603420",
+                "inserted": "2020-08-11T05:15:03.142203",
+                "state": "added"
+            }
+        }
