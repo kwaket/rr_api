@@ -5,11 +5,13 @@ verify_ssl = true
 
 [dev-packages]
 jupyter = "*"
+ipdb = "*"
+mypy = "*"
+pylint = "*"
 
 [packages]
 selenium = "*"
 pillow = "*"
-ipdb = "*"
 click = "*"
 redis = "*"
 fastapi = "*"
