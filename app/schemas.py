@@ -44,6 +44,7 @@ class Application(BaseModel):
     inserted: Optional[datetime] = None
     updated: Optional[datetime] = None
     state: Optional[ApplicationState] = None
+    error_message: Optional[str]
 
     @classmethod
     @validator('cadnum')
@@ -64,6 +65,7 @@ class Application(BaseModel):
                 "result": "/applications/id/result",
                 "inserted": "2020-08-11T05:15:00.603420",
                 "inserted": "2020-08-11T05:15:03.142203",
-                "state": "added"
+                "state": "added",
+                "error_message": ""
             }
         }
