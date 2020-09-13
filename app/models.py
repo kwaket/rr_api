@@ -33,7 +33,8 @@ class Application(Base):
             "result": self.result,
             "inserted": self.inserted,
             "updated": self.updated,
-            "state": self.state.name if self.state else None
+            "state": self.state.name if self.state else None,
+            "error_message": self.error_message
         })
 
 
