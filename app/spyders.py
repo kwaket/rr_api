@@ -211,7 +211,7 @@ class EGRNApplication(EGRNBase):
         for field, part in zip(key_fields, self.egrn_key.split('-')):
             field.clear()
             self._fill_field(field, part)
-            time.sleep(1)
+        time.sleep(1)
         _key_fields = self.driver.find_elements_by_xpath(
             './/div[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
         _key = '-'.join([k.get_attribute('value') for k in _key_fields])
