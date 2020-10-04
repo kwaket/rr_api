@@ -261,6 +261,8 @@ class EGRNApplication(EGRNBase):
                 self.db, application_id,
                 {'state': 'error',
                  'error_message': error_message})
+        except Exception as exc:
+            self._save_exception_state(str(exc))
         else:
             application.error_message = None
         return application
@@ -353,6 +355,8 @@ class EGRNApplication(EGRNBase):
                 self.db, application_id,
                 {'state': 'error',
                  'error_message': error_message})
+        except Exception as exc:
+            self._save_exception_state(str(exc))
         else:
             application.error_message = None
         return application
@@ -361,6 +365,8 @@ class EGRNApplication(EGRNBase):
     def _update_application_state(self, application_id: int):
         self._set_application_id(application_id)
         application = services.get_application(self.db, application_id)
+        if not application.foreign_id:
+            raise ExecutorError('Номер выписки не найден')
         application = services.update_application(
             self.db, application.id, {'state': ApplicationState.updating})
         if not self.is_auth:
@@ -371,7 +377,7 @@ class EGRNApplication(EGRNBase):
 
         self._wait_and_click('//span[text()="Мои заявки"]', timeout=10)
 
-        filter_input = self.driver.find_element_by_class_name('v-textfield')
+        filter_input = self._wait_element('//*[@class="v-textfield"]')
         filter_input.send_keys(application.foreign_id)
 
         self._wait_and_click('//span[text() = "Обновить"]')
