@@ -1,5 +1,4 @@
 import os
-import json
 from contextlib import suppress
 import time
 import logging
@@ -7,9 +6,8 @@ from datetime import datetime
 import random
 
 from selenium import webdriver
-from selenium.common.exceptions import (
-    WebDriverException, TimeoutException, StaleElementReferenceException,
-    NoSuchElementException)
+from selenium.common.exceptions import (WebDriverException,
+    TimeoutException, StaleElementReferenceException)
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 

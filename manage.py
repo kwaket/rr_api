@@ -6,6 +6,7 @@ import click
 def cli():
     pass
 
+
 @click.command()
 def runserver():
     click.echo('Run server at 127.0.0.1:8000')
