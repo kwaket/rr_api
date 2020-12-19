@@ -17,6 +17,17 @@
 ![Schema](img/schema.jpg)
 
 
+## Установка
+
+```
+alembic upgrade head
+```
+
+```
+python manage.py deploy
+```
+
+
 ## Проблемы
 
 На стороне spyders.py:
