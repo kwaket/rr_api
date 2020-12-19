@@ -4,11 +4,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 
-[dev-packages]
-jupyter = "*"
-rq-dashboard = "*"
-
-
 [packages]
 fastapi = "*"
 uvicorn = "*"
@@ -30,6 +25,7 @@ ipdb = "*"
 jupyter = "*"
 pylint = "*"
 mypy = "*"
+rq-dashboard = "*"
 
 [requires]
 python_version = "3.8"
