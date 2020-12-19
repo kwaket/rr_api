@@ -10,7 +10,7 @@ import app.models as models
 from app.db import Base
 
 
-SQLALCHEMY_DATABASE_URL = os.getenv('SQLALCHEMY_DATABASE_URL')
+SQLALCHEMY_DATABASE_URL = os.getenv('SQLALCHEMY_DATABASE_TEST_URL')
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
