@@ -3,26 +3,33 @@ name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
+
 [dev-packages]
 jupyter = "*"
 rq-dashboard = "*"
 
+
 [packages]
-selenium = "*"
-pillow = "*"
-ipdb = "*"
-click = "*"
-redis = "*"
 fastapi = "*"
 uvicorn = "*"
+ujson = "*"
+pillow = "*"
+click = "*"
+redis = "*"
 pytest = "*"
 rq = "*"
 requests = "*"
 lxml = "*"
-ujson = "*"
-psycopg2-binary = "*"
 sqlalchemy = "*"
 alembic = "*"
+selenium = "*"
+psycopg2-binary = "*"
+
+[dev-packages]
+ipdb = "*"
+jupyter = "*"
+pylint = "*"
+mypy = "*"
 
 [requires]
 python_version = "3.8"
