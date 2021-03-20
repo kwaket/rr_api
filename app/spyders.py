@@ -78,7 +78,7 @@ class EGRNBase():
                 command_executor='http://localhost:4444/wd/hub',
                 desired_capabilities=options.to_capabilities())
         self.current_application_id = None
-        self.service_url = 'https://rosreestr.ru'
+        self.service_url = 'https://rosreestr.gov.ru'
         self.service_title = 'Запрос посредством доступа к ФГИС ЕГРН'
         self.db = SessionLocal()
 
@@ -182,7 +182,7 @@ class EGRNApplication(EGRNBase):
         EGRNBase.__init__(self)
         self.egrn_key = egrn_key or EGRN_KEY
         self.is_auth = False
-        self.service_url = 'https://rosreestr.ru/wps/portal/p/cc_present/ir_egrn'
+        self.service_url = 'https://rosreestr.gov.ru/wps/portal/p/cc_present/ir_egrn'
 
     @logger
     def login(self):
@@ -355,6 +355,7 @@ class EGRNApplication(EGRNBase):
                  'error_message': error_message})
         except Exception as exc:
             self._save_exception_state(str(exc))
+            application = services.get_application(self.db, application_id)
         else:
             application.error_message = None
         return application

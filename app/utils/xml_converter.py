@@ -18,18 +18,12 @@ def _is_downloaded(filepath):
 
 
 def download_file(url, filepath):
-    # local_filename = url.split('/')[-1]
-    print(url, filepath)
     local_filename = filepath
-    # NOTE the stream=True parameter belo  w
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(local_filename, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                # If you have chunk encoded response uncomment if
-                # and set chunk_size parameter to None.
-                #if chunk:
-                f.write(chunk)
+    with contextlib.suppress(Exception):
+        with requests.get(url, stream=True) as r:
+            with open(local_filename, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
     return local_filename
 
 
@@ -49,17 +43,22 @@ def _get_xsl_filename(xml_filename):
 
 
 def download_dependencies(xsl_filename):
-    afile = open(xsl_filename)
+    parser = ET.XMLParser(remove_comments=True)
+    tree = ET.parse(xsl_filename, parser)
+    lines = ET.tostring(tree, pretty_print=True)
+    lines = lines.decode().split('\n')
+
     pattern = r'\<xsl\:variable\b.*select\="document\(\'(.*)\'\)"\/\>'
     xsl_dir = os.path.split(xsl_filename)[0]
-    for line in afile.readlines():
+
+    for line in lines:
         res = re.findall(pattern, line)
         if res:
             relative = res[0]
-            url = 'https://portal.rosreestr.ru/xsl/GKN/Vidimus/07/' + relative
+            filepath = os.path.join(xsl_dir, relative)
+            url = 'https://portal.rosreestr.ru/' + filepath
             if _is_downloaded(url):
                 continue
-            filepath = os.path.join(xsl_dir, relative)
             _make_dirs_tree(filepath)
             download_file(url, filepath)
             _add_to_downloaded(url)
