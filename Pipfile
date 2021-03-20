@@ -1,7 +1,8 @@
 [[source]]
+name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
-name = "pypi"
+
 
 [packages]
 fastapi = "*"
@@ -24,6 +25,7 @@ ipdb = "*"
 jupyter = "*"
 pylint = "*"
 mypy = "*"
+rq-dashboard = "*"
 
 [requires]
 python_version = "3.8"

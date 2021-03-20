@@ -8,3 +8,5 @@ tasks/*
 *.zip
 download.txt
 xsl/
+diagnostics/data/*
+diagnostics/.ipynb_checkpoints/*

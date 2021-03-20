@@ -62,6 +62,7 @@ def _update_application_model(db: Session, model: models.Application,
     model.updated = datetime.utcnow()
     if updated_fields.get('state'):
         model.state = _get_application_state(db, updated_fields['state'])
+    model.error_message = updated_fields.get('error_message', model.error_message)
     return _save_application_model(db, model)
 
 
@@ -128,7 +129,7 @@ def order_application(application: schemas.Application):
     '''Order application on rosreestr.ru'''
     logging.info('application added: %s' % str(application))
     spyder = EGRNApplication()
-    _run_application_with_exception(spyder.order_application, application.id)
+    spyder.order_application(application.id)
     spyder.close()
 
 
@@ -136,5 +137,5 @@ def update_application_data(application: schemas.Application):
     '''Update application data (status, result) for rosreestr.ru'''
     logging.info('updating application data: %s' % str(application))
     spyder = EGRNApplication()
-    _run_application_with_exception(spyder.update_application_state, application.id)
+    spyder.update_application_state(application.id)
     spyder.close()

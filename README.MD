@@ -17,6 +17,19 @@
 ![Schema](img/schema.jpg)
 
 
+## Установка
+
+Делаем начальную миграцию
+```
+alembic upgrade head
+```
+
+Заполняем необходимые данные
+```
+python manage.py deploy
+```
+
+
 ## Проблемы
 
 На стороне spyders.py:

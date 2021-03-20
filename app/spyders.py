@@ -77,7 +77,6 @@ class EGRNBase():
             self.driver = webdriver.Remote(
                 command_executor='http://localhost:4444/wd/hub',
                 desired_capabilities=options.to_capabilities())
-        self.driver.implicitly_wait(30)
         self.current_application_id = None
         self.service_url = 'https://rosreestr.ru'
         self.service_title = 'Запрос посредством доступа к ФГИС ЕГРН'
@@ -97,10 +96,11 @@ class EGRNBase():
     def _go_to_service(self):
         self.driver.get(self.service_url)
         try:
-            WebDriverWait(self.driver, timeout=60).until(
+            WebDriverWait(self.driver, timeout=20).until(
                 expected_conditions.title_contains(self.service_title))
         except TimeoutException:
-            raise ExecutorError('Не удалось загрузить страницу сервиса ' + self.service_url)
+            raise ExecutorError(
+                'Не удалось загрузить страницу сервиса ' + self.service_url)
 
 
     @logger
@@ -209,7 +209,7 @@ class EGRNApplication(EGRNBase):
         for field, part in zip(key_fields, self.egrn_key.split('-')):
             field.clear()
             self._fill_field(field, part)
-            time.sleep(1)
+        time.sleep(1)
         _key_fields = self.driver.find_elements_by_xpath(
             './/div[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
         _key = '-'.join([k.get_attribute('value') for k in _key_fields])
@@ -230,11 +230,11 @@ class EGRNApplication(EGRNBase):
     @logger
     def fill_captcha(self):
         captcha_pic = self._wait_element('//img[contains(@src, "captcha")]')
-        # import ipdb; ipdb.set_trace()
         code = self._recognize_captcha(captcha_pic)
         while not code:
             time.sleep(3)
-            self._wait_and_click('//span[@class="v-button-caption" and text()="Другую картинку"]')
+            self._wait_and_click(
+                '//span[@class="v-button-caption" and text()="Другую картинку"]')
             captcha_pic = self._wait_element('//img[contains(@src, "captcha")]')
             code = self._recognize_captcha(captcha_pic)
 
@@ -245,10 +245,28 @@ class EGRNApplication(EGRNBase):
             captcha_field.clear()
             captcha_field.send_keys(code)
             time.sleep(3)
-            logging.info('%s Trying to fill captcha again', self.current_application_id)
+            logging.info('%s Trying to fill captcha again',
+                         self.current_application_id)
+
+    def order_application(self, application_id):
+        try:
+            application = self._order_application(application_id)
+        except ExecutorError as exc:
+            prefix = 'Нe удалось заказать выписку'
+            error_message = '{prefix}. {message}'.format(prefix=prefix,
+                                                         message=str(exc))
+            application = services.update_application(
+                self.db, application_id,
+                {'state': 'error',
+                 'error_message': error_message})
+        except Exception as exc:
+            self._save_exception_state(str(exc))
+        else:
+            application.error_message = None
+        return application
 
     @logger
-    def order_application(self, application_id):
+    def _order_application(self, application_id):
         self._set_application_id(application_id)
         application = services.get_application(self.db, application_id)
         application.state = ApplicationState.adding
@@ -265,7 +283,8 @@ class EGRNApplication(EGRNBase):
                              timeout=10)
         self._wait_element('//*[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input',
                            timeout=20)
-        fields = self.driver.find_elements_by_xpath('//*[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
+        fields = self.driver.find_elements_by_xpath(
+            '//*[@id="v-Z7_01HA1A42KODT90AR30VLN22003"]//input')
         cadnum_field, region_field = fields[0], fields[2]
         cadnum_field.send_keys(application.cadnum)
         region = get_region_rr(application.cadnum)
@@ -276,7 +295,8 @@ class EGRNApplication(EGRNBase):
 
         self.driver.find_element_by_xpath('//span[text()="Найти"]').click()
 
-        self._wait_and_click('//td[contains(@class, "v-table-cell-content-cadastral_num")]')
+        self._wait_and_click(
+            '//td[contains(@class, "v-table-cell-content-cadastral_num")]')
 
         self.fill_captcha()
 
@@ -307,8 +327,12 @@ class EGRNApplication(EGRNBase):
             application = services.update_application(self.db, application.id,
                                                       {'state': ApplicationState.error,
                                                        'message': str(message)})
+
+            raise ExecutorError(message)
+
         ## Продолжить работу
-        self.driver.find_element_by_xpath('//span[text()="Продолжить работу"]').click()
+        self.driver.find_element_by_xpath(
+            '//span[text()="Продолжить работу"]').click()
         return application
 
     def _get_results(self):
@@ -318,12 +342,31 @@ class EGRNApplication(EGRNBase):
             raise ValueError('Too much or too few results found')
         return results
 
+    def update_application_state(self, application_id):
+        try:
+            application = self._update_application_state(application_id)
+        except ExecutorError as exc:
+            prefix = 'Нe удалось обновить данные по выписке'
+            error_message = '{prefix}. {message}'.format(prefix=prefix,
+                                                         message=str(exc))
+            application = services.update_application(
+                self.db, application_id,
+                {'state': 'error',
+                 'error_message': error_message})
+        except Exception as exc:
+            self._save_exception_state(str(exc))
+        else:
+            application.error_message = None
+        return application
+
     @logger
-    def update_application_state(self, application_id: int):
+    def _update_application_state(self, application_id: int):
         self._set_application_id(application_id)
         application = services.get_application(self.db, application_id)
-        application = services.update_application(self.db, application.id,
-                                                  {'state': ApplicationState.updating})
+        if not application.foreign_id:
+            raise ExecutorError('Номер выписки не найден')
+        application = services.update_application(
+            self.db, application.id, {'state': ApplicationState.updating})
         if not self.is_auth:
             self.login()
             time.sleep(5)
@@ -332,7 +375,7 @@ class EGRNApplication(EGRNBase):
 
         self._wait_and_click('//span[text()="Мои заявки"]', timeout=10)
 
-        filter_input = self.driver.find_element_by_class_name('v-textfield')
+        filter_input = self._wait_element('//*[@class="v-textfield"]')
         filter_input.send_keys(application.foreign_id)
 
         self._wait_and_click('//span[text() = "Обновить"]')

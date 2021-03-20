@@ -10,7 +10,7 @@ class Application(Base):
     __tablename__ = "applications"
 
     id = Column(Integer, primary_key=True)
-    cadnum = Column(String(100))  # add validator
+    cadnum = Column(String(100))  # TODO: add validator
     foreign_id = Column(String(20), unique=True)
     foreign_status = Column(String(100))
     foreign_created = Column(DateTime())
@@ -20,6 +20,8 @@ class Application(Base):
 
     state_id = Column(Integer, ForeignKey('applications_states.id'))
     state = relationship('ApplicationState', back_populates="application")
+
+    error_message = Column(String(1024))
 
     def to_schema(self) -> schemas.Application:
         return schemas.Application(**{
@@ -31,7 +33,8 @@ class Application(Base):
             "result": self.result,
             "inserted": self.inserted,
             "updated": self.updated,
-            "state": self.state.name if self.state else None
+            "state": self.state.name if self.state else None,
+            "error_message": self.error_message
         })
 
 
