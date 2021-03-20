@@ -81,7 +81,7 @@
 
   - name: Download and unarchive chrome driver
     unarchive:
-      src: https://chromedriver.storage.googleapis.com/83.0.4103.39/chromedriver_linux64.zip
+      src: https://chromedriver.storage.googleapis.com/88.0.4324.96/chromedriver_linux64.zip
       dest: /opt/selenium/
       remote_src: yes
 
