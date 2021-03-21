@@ -154,5 +154,5 @@ async def add_application(application: schemas.Application,
     except services.ServiceException as exc:
         raise HTTPException(500, "Server error. Failed to order application")
     queue.enqueue(services.order_application, application)
-    queue_low.enqueue(services.update_application_data, application)
+    queue_low.enqueue(services.update_application_data, application, force=False)
     return application

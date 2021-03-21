@@ -133,8 +133,11 @@ def order_application(application: schemas.Application):
     spyder.close()
 
 
-def update_application_data(application: schemas.Application):
+def update_application_data(application: schemas.Application,
+                            force: bool = True):
     '''Update application data (status, result) for rosreestr.ru'''
+    if not application.foreign_id and not force:
+        return None
     logging.info('updating application data: %s' % str(application))
     spyder = EGRNApplication()
     spyder.update_application_state(application.id)
